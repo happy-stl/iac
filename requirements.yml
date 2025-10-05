@@ -8,6 +8,8 @@ collections:
     version: ">=1.7.0"
   - name: community.windows
     version: ">=1.0.0"
+  - name: chocolatey.chocolatey
+    version: ">=1.0.0"
 
 # Example roles (uncomment as needed):
 # - name: geerlingguy.docker

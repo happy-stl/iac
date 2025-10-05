@@ -1,5 +1,7 @@
 ---
-# Development Environment Playbooks
+# Development Environment Playbook
+# This playbook targets only development hosts
+
 - name: Configure Gaming Environment (Linux Development)
   hosts: linux_dev
   connection: local
@@ -24,22 +26,3 @@
   roles:
     - windows-wsl2-setup
     - windows-dev
-
-# Production Environment Playbooks
-- name: Configure Production Web Servers
-  hosts: web_servers
-  become: yes
-  roles:
-    - common
-    # Add production-specific roles here
-    # - nginx
-    # - ssl
-
-- name: Configure Production Database Servers
-  hosts: database_servers
-  become: yes
-  roles:
-    - common
-    # Add production-specific roles here
-    # - mysql
-    # - backup

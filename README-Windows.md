@@ -30,27 +30,45 @@ winrm set winrm/config/service @{AllowUnencrypted="true"}
 
 ## Usage
 
-### Running on Linux (current setup):
+### Development Environment:
 ```bash
-# Run all playbooks (Linux only)
-ansible-playbook -i inventories/local.yml playbooks/site.yml
+# Run all development playbooks (Linux + Windows)
+ansible-playbook -i inventories/local.yml playbooks/development.yml
+
+# Run only Linux development
+ansible-playbook -i inventories/local.yml playbooks/development.yml --limit linux_dev
+
+# Run only Windows development
+ansible-playbook -i inventories/local.yml playbooks/development.yml --limit windows_dev
 
 # Run specific Linux playbooks
 ansible-playbook -i inventories/local.yml playbooks/dev-setup.yml
 ansible-playbook -i inventories/local.yml playbooks/gaming-setup.yml
 ```
 
-### Running on Windows:
+### Production Environment:
 ```bash
-# Run Windows WSL2 setup
-ansible-playbook -i inventories/local.yml playbooks/windows-only.yml
+# Run all production playbooks
+ansible-playbook -i inventories/local.yml playbooks/production.yml
 
-# Or run the main site playbook (will detect OS)
+# Run only web servers
+ansible-playbook -i inventories/local.yml playbooks/production.yml --limit web_servers
+
+# Run only database servers
+ansible-playbook -i inventories/local.yml playbooks/production.yml --limit database_servers
+```
+
+### All Environments:
+```bash
+# Run everything (development + production)
 ansible-playbook -i inventories/local.yml playbooks/site.yml
 ```
 
-### Running from Windows to configure WSL2:
-```powershell
+### Windows-specific:
+```bash
+# Run Windows WSL2 setup only
+ansible-playbook -i inventories/local.yml playbooks/windows-only.yml
+
 # From PowerShell on Windows
 ansible-playbook -i inventories/local.yml playbooks/windows-only.yml --connection=local
 ```
@@ -73,21 +91,35 @@ ansible-playbook -i inventories/local.yml playbooks/windows-only.yml --connectio
 
 ## Inventory Configuration
 
-The inventory supports both Linux and Windows hosts:
+The inventory is organized by environment and OS:
 
 ```yaml
 all:
   children:
-    local:                    # Linux hosts
-      hosts:
-        localhost:
-          ansible_connection: local
-    windows_hosts:           # Windows hosts
-      hosts:
-        windows-desktop:
-          ansible_connection: winrm
-          ansible_user: Administrator
-          ansible_password: your_password
+    development:
+      children:
+        linux_dev:           # Linux development hosts
+          hosts:
+            localhost:
+              ansible_connection: local
+        windows_dev:         # Windows development hosts
+          hosts:
+            windows-desktop:
+              ansible_connection: winrm
+              ansible_user: Administrator
+              ansible_password: your_password
+    production:
+      children:
+        web_servers:         # Production web servers
+          hosts:
+            web-1:
+              ansible_host: 192.168.1.10
+              ansible_user: ubuntu
+        database_servers:    # Production database servers
+          hosts:
+            db-1:
+              ansible_host: 192.168.1.20
+              ansible_user: ubuntu
 ```
 
 ## WSL2 Configuration

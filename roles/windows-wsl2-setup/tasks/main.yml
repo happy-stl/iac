@@ -1,54 +1,64 @@
 ---
 - name: Check if running on Windows
-  win_debug:
+  debug:
     msg: "Running on Windows {{ ansible_distribution_version }}"
   when: ansible_system == "Windows"
 
 - name: Enable WSL feature
-  win_feature:
+  ansible.windows.win_feature:
     name: Microsoft-Windows-Subsystem-Linux
     state: present
   become: yes
+  when: ansible_system == "Windows"
 
 - name: Enable Virtual Machine Platform feature
-  win_feature:
+  ansible.windows.win_feature:
     name: VirtualMachinePlatform
     state: present
   become: yes
+  when: ansible_system == "Windows"
 
 - name: Set WSL version to 2
-  win_shell: wsl --set-default-version 2
+  ansible.windows.win_shell: wsl --set-default-version 2
   become: yes
+  when: ansible_system == "Windows"
 
 - name: Download WSL distributions
-  win_get_url:
+  ansible.windows.win_get_url:
     url: "{{ item.download_url }}"
     dest: "C:\\temp\\{{ item.name }}.appx"
   loop: "{{ wsl_distributions }}"
-  when: not ansible_check_mode
+  when:
+    - ansible_system == "Windows"
+    - not ansible_check_mode
 
 - name: Install WSL distributions
-  win_shell: |
+  ansible.windows.win_shell: |
     Add-AppxPackage "C:\\temp\\{{ item.name }}.appx"
   loop: "{{ wsl_distributions }}"
   become: yes
-  when: not ansible_check_mode
+  when:
+    - ansible_system == "Windows"
+    - not ansible_check_mode
 
 - name: Set default WSL distribution
-  win_shell: wsl --set-default "{{ wsl_default_distribution }}"
+  ansible.windows.win_shell: wsl --set-default "{{ wsl_default_distribution }}"
   become: yes
+  when: ansible_system == "Windows"
 
 - name: Update WSL kernel
-  win_shell: wsl --update
+  ansible.windows.win_shell: wsl --update
   become: yes
+  when: ansible_system == "Windows"
 
 - name: Create WSL configuration directory
-  win_file:
+  ansible.windows.win_file:
     path: "C:\\Users\\{{ ansible_user }}\\.wslconfig"
     state: directory
+  when: ansible_system == "Windows"
 
 - name: Configure WSL settings
-  win_copy:
+  ansible.windows.win_copy:
     content: |
       [wsl2]
       memory={{ wsl_config.memory }}
@@ -57,39 +67,49 @@
       localhostForwarding={{ wsl_config.localhostForwarding | lower }}
     dest: "C:\\Users\\{{ ansible_user }}\\.wslconfig"
   notify: restart wsl
+  when: ansible_system == "Windows"
 
 - name: Install Chocolatey (if not present)
-  win_shell: |
+  ansible.windows.win_shell: |
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
   become: yes
-  when: ansible_check_mode == false
+  when:
+    - ansible_system == "Windows"
+    - ansible_check_mode == false
 
 - name: Install Windows Terminal
-  win_chocolatey:
+  chocolatey.chocolatey.win_chocolatey:
     name: microsoft-windows-terminal
     state: present
   become: yes
-  when: ansible_check_mode == false
+  when:
+    - ansible_system == "Windows"
+    - ansible_check_mode == false
   notify: restart windows terminal
 
 - name: Install other development tools
-  win_chocolatey:
+  chocolatey.chocolatey.win_chocolatey:
     name: "{{ item }}"
     state: present
   become: yes
-  when: ansible_check_mode == false
+  when:
+    - ansible_system == "Windows"
+    - ansible_check_mode == false
   loop: "{{ windows_dev_tools | difference(['microsoft-windows-terminal']) }}"
 
 - name: Create development directory structure
-  win_file:
+  ansible.windows.win_file:
     path: "{{ item }}"
     state: directory
   loop: "{{ dev_directories }}"
+  when: ansible_system == "Windows"
 
 - name: Display WSL status
-  win_shell: wsl --list --verbose
+  ansible.windows.win_shell: wsl --list --verbose
   register: wsl_status
+  when: ansible_system == "Windows"
 
 - name: Show WSL status
-  win_debug:
+  debug:
     var: wsl_status.stdout_lines
+  when: ansible_system == "Windows"

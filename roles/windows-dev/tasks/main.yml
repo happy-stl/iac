@@ -1,0 +1,14 @@
+---
+- name: Install Windows development packages
+  chocolatey.chocolatey.win_chocolatey:
+    name: "{{ packages }}"
+    state: present
+  become: yes
+  when: ansible_system == "Windows"
+
+- name: Create Windows development directories
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  loop: "{{ directories }}"
+  when: ansible_system == "Windows"
