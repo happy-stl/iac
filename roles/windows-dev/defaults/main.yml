@@ -1,0 +1,20 @@
+---
+# Default variables for windows-dev role
+
+# Windows development packages
+packages:
+  - git
+  - vscode
+  - microsoft-windows-terminal
+  - docker-desktop
+  - postman
+  - 7zip
+  - notepadplusplus
+  - putty
+  - winscp
+  - chocolatey
+
+# Windows development directories
+directories:
+  - "C:\\Users\\{{ ansible_user }}\\Documents\\Repositories"
+  - "C:\\Users\\{{ ansible_user }}\\Documents\\WSL"

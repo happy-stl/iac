@@ -1,0 +1,33 @@
+---
+# Linux development group variables
+# These will override the defaults in roles/linux-dev/defaults/main.yml
+
+# Linux development packages
+packages:
+  - curl
+  - htop
+  - tmux
+  - vim
+  - git
+  - gcc
+  - gcc-c++
+  - make
+  - python3-pip
+  - nodejs
+  - npm
+  - docker
+  - docker-compose
+  - code
+  - postman
+  - tree
+  - jq
+  - wget
+  - unzip
+  - zip
+
+# Linux development directories
+directories:
+  - "{{ ansible_user_dir }}/.config"
+  - "{{ ansible_user_dir }}/.local/bin"
+  - "{{ ansible_user_dir }}/.local/share"
+  - "{{ ansible_user_dir }}/Documents/Repositories"

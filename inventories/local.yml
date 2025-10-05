@@ -7,15 +7,16 @@ all:
           hosts:
             localhost:
               ansible_connection: local
-        windows_dev:
-          hosts:
-            windows-desktop:
-              ansible_host: localhost
-              ansible_connection: winrm
-              ansible_user: "{{ ansible_user | default('Administrator') }}"
-              ansible_password: "{{ ansible_password | default('') }}"
-              ansible_winrm_server_cert_validation: ignore
-              ansible_winrm_transport: basic
+    windows_dev:
+      hosts:
+        # Uncomment and configure when you have a real Windows host
+        # windows-desktop:
+        #   ansible_host: 192.168.1.100  # Replace with actual Windows IP
+        #   ansible_connection: winrm
+        #   ansible_user: "{{ ansible_user | default('Administrator') }}"
+        #   ansible_password: "{{ ansible_password | default('') }}"
+        #   ansible_winrm_server_cert_validation: ignore
+        #   ansible_winrm_transport: basic
     production:
       children:
         web_servers:

@@ -6,18 +6,21 @@
       - mednafen
     state: present
   become: yes
+  when: ansible_system == "Linux"
 
 - name: Create Mednafen configuration directory
   file:
     path: "{{ mednafen_config_dir }}"
     state: directory
     mode: '0755'
+  when: ansible_system == "Linux"
 
 - name: Create ROM directory
   file:
     path: "{{ rom_dir }}"
     state: directory
     mode: '0755'
+  when: ansible_system == "Linux"
 
 - name: Download Sonic & Knuckles ROM
   get_url:
@@ -25,6 +28,7 @@
     dest: "{{ rom_dir }}/Sonic & Knuckles (World).zip"
     mode: '0644'
   when:
+    - ansible_system == "Linux"
     - sonic_knuckles_rom_url is defined
     - not (lookup('file', '{{ rom_dir }}/Sonic & Knuckles (World).zip') is defined)
 
@@ -85,12 +89,14 @@
       input.joystick.axis_dead 0.00
     dest: "{{ mednafen_config_dir }}/mednafen.cfg"
     mode: '0644'
+  when: ansible_system == "Linux"
 
 - name: Create applications directory
   file:
     path: "{{ applications_dir }}"
     state: directory
     mode: '0755'
+  when: ansible_system == "Linux"
 
 - name: Create desktop launcher
   copy:
@@ -108,3 +114,4 @@
       MimeType=application/x-genesis-rom;
     dest: "{{ applications_dir }}/sonic-knuckles.desktop"
     mode: '0755'
+  when: ansible_system == "Linux"

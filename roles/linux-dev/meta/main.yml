@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  author: your_name
+  description: Linux development packages and directories role
+  company: your_company
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Linux
+      versions:
+        - all
+  galaxy_tags:
+    - linux
+    - development
+    - packages
+    - directories
+    - setup
+
+dependencies: []

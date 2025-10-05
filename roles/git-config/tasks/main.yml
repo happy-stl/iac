@@ -4,6 +4,7 @@
     name: "{{ packages }}"
     state: present
   become: yes
+  when: ansible_system == "Linux"
 
 - name: Create directories
   file:
@@ -11,6 +12,7 @@
     state: directory
     mode: '0755'
   loop: "{{ directories }}"
+  when: ansible_system == "Linux"
 
 - name: Configure git user name
   git_config:
@@ -18,6 +20,7 @@
     value: "{{ git_user_name }}"
     scope: global
   when:
+    - ansible_system == "Linux"
     - git_user_name is defined
 
 - name: Configure git user email
@@ -26,6 +29,7 @@
     value: "{{ git_user_email }}"
     scope: global
   when:
+    - ansible_system == "Linux"
     - git_user_email is defined
 
 - name: Configure git aliases
@@ -34,27 +38,32 @@
     value: "{{ item.command }}"
     scope: global
   loop: "{{ git_aliases }}"
+  when: ansible_system == "Linux"
 
 - name: Set git default branch name
   git_config:
     name: "init.defaultBranch"
     value: "main"
     scope: global
+  when: ansible_system == "Linux"
 
 - name: Configure git pull strategy
   git_config:
     name: "pull.rebase"
     value: "false"
     scope: global
+  when: ansible_system == "Linux"
 
 - name: Configure git color output
   git_config:
     name: "color.ui"
     value: "auto"
     scope: global
+  when: ansible_system == "Linux"
 
 - name: Configure git to prune remote branches
   git_config:
     name: "remote.origin.prune"
     value: "true"
     scope: global
+  when: ansible_system == "Linux"

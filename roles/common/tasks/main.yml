@@ -1,19 +1,22 @@
 ---
-- name: Install packages
+- name: Install common packages (Linux)
   package:
     name: "{{ packages }}"
     state: present
   become: yes
+  when: ansible_system == "Linux"
 
-- name: Create directories
+- name: Create common directories (Linux)
   file:
     path: "{{ item }}"
     state: directory
     mode: '0755'
   loop: "{{ directories }}"
+  when: ansible_system == "Linux"
 
-- name: Deploy tmux configuration
+- name: Deploy tmux configuration (Linux)
   template:
     src: tmux.conf.j2
     dest: "{{ ansible_user_dir }}/.tmux.conf"
     mode: '0644'
+  when: ansible_system == "Linux"

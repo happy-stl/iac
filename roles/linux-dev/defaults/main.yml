@@ -1,0 +1,30 @@
+---
+# Default variables for linux-dev role
+
+# Linux development packages
+packages:
+  - curl
+  - htop
+  - tmux
+  - vim
+  - git
+  - gcc
+  - gcc-c++
+  - make
+  - python3-pip
+  - nodejs
+  - npm
+  - docker
+  - docker-compose
+  - tree
+  - jq
+  - wget
+  - unzip
+  - zip
+
+# Linux development directories
+directories:
+  - "{{ ansible_user_dir }}/.config"
+  - "{{ ansible_user_dir }}/.local/bin"
+  - "{{ ansible_user_dir }}/.local/share"
+  - "{{ ansible_user_dir }}/Documents/Repositories"

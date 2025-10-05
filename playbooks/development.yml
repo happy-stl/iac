@@ -8,16 +8,16 @@
   become: no
   roles:
     - mednafen-gaming
-  when: ansible_system == "Linux"
 
 - name: Development Environment Setup (Linux Development)
   hosts: linux_dev
   connection: local
   become: no
   roles:
+    - common
+    - linux-dev
     - git-config
     - nvim-config
-  when: ansible_system == "Linux"
 
 - name: Windows WSL2 Setup (Windows Development)
   hosts: windows_dev
@@ -25,4 +25,4 @@
   become: no
   roles:
     - windows-wsl2-setup
-  when: ansible_system == "Windows"
+    - windows-dev
