@@ -52,3 +52,9 @@
     name: "color.ui"
     value: "auto"
     scope: global
+
+- name: Configure git to prune remote branches
+  git_config:
+    name: "remote.origin.prune"
+    value: "true"
+    scope: global
