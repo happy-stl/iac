@@ -1,12 +1,17 @@
 ---
 # Ansible Galaxy requirements
 # This file can be used to install external roles from Ansible Galaxy
-# Example:
+
+# Collections for Windows support
+collections:
+  - name: ansible.windows
+    version: ">=1.7.0"
+  - name: community.windows
+    version: ">=1.0.0"
+
+# Example roles (uncomment as needed):
 # - name: geerlingguy.docker
 #   version: "4.1.0"
 # - src: https://github.com/geerlingguy/ansible-role-docker
 #   name: docker
 #   version: "4.1.0"
-
-# Currently no external dependencies
-# Add roles here as needed

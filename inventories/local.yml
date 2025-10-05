@@ -5,3 +5,12 @@ all:
       hosts:
         localhost:
           ansible_connection: local
+    windows_hosts:
+      hosts:
+        windows-desktop:
+          ansible_host: localhost
+          ansible_connection: winrm
+          ansible_user: "{{ ansible_user | default('Administrator') }}"
+          ansible_password: "{{ ansible_password | default('') }}"
+          ansible_winrm_server_cert_validation: ignore
+          ansible_winrm_transport: basic

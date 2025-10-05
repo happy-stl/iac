@@ -1,15 +1,27 @@
 ---
-- name: Configure Gaming Environment
-  hosts: localhost
+# Linux-specific playbooks
+- name: Configure Gaming Environment (Linux)
+  hosts: local
   connection: local
   become: no
   roles:
     - mednafen-gaming
+  when: ansible_system == "Linux"
 
-- name: Development Environment Setup
-  hosts: localhost
+- name: Development Environment Setup (Linux)
+  hosts: local
   connection: local
   become: no
   roles:
     - git-config
     - nvim-config
+  when: ansible_system == "Linux"
+
+# Windows-specific playbooks
+- name: Windows WSL2 Setup
+  hosts: windows_hosts
+  connection: winrm
+  become: no
+  roles:
+    - windows-wsl2-setup
+  when: ansible_system == "Windows"

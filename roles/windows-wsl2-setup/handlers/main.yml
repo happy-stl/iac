@@ -1,0 +1,8 @@
+---
+- name: restart wsl
+  win_shell: wsl --shutdown
+  become: yes
+
+- name: restart windows terminal
+  win_shell: taskkill /f /im WindowsTerminal.exe
+  ignore_errors: yes

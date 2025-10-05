@@ -6,5 +6,5 @@ nvim_config_file: "{{ nvim_config_dir }}/init.vim"
 nvim_config_mode: '0644'
 
 # Package lists
-common_packages:
+packages:
   - neovim
