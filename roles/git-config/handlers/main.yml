@@ -1,0 +1,4 @@
+---
+- name: Git configuration deployed
+  debug:
+    msg: "Git configuration has been deployed successfully!"

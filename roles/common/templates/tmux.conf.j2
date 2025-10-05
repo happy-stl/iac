@@ -1,0 +1,38 @@
+# Tmux configuration file
+# Change the command key from Ctrl-b to Ctrl-s
+
+# Set the prefix key to Ctrl-s
+set-option -g prefix C-s
+
+# Unbind the default prefix key (Ctrl-b) to avoid conflicts
+unbind C-b
+
+# Bind Ctrl-s to send the prefix key (for nested tmux sessions)
+bind C-s send-prefix
+
+# Reload configuration file with Ctrl-s r
+bind r source-file ~/.tmux.conf \; display-message "Config reloaded!"
+
+# Enable mouse support (optional but useful)
+set -g mouse on
+
+# Set default terminal to support colors
+set -g default-terminal "screen-256color"
+
+# Increase scrollback buffer size
+set -g history-limit 10000
+
+# Start windows and panes at 1 instead of 0
+set -g base-index 1
+setw -g pane-base-index 1
+
+# Renumber windows when a window is closed
+set -g renumber-windows on
+
+# Reverse the default split key bindings
+# Ctrl-s+% now creates horizontal split (was vertical)
+# Ctrl-s+" now creates vertical split (was horizontal)
+unbind-key '"'
+unbind-key %
+bind % split-window -v
+bind '"' split-window -h

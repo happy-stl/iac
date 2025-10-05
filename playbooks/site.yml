@@ -1,0 +1,15 @@
+---
+- name: Configure Gaming Environment
+  hosts: localhost
+  connection: local
+  become: no
+  roles:
+    - mednafen-gaming
+
+- name: Development Environment Setup
+  hosts: localhost
+  connection: local
+  become: no
+  roles:
+    - git-config
+    - nvim-config

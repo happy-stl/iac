@@ -1,0 +1,4 @@
+---
+- name: Neovim configuration deployed
+  debug:
+    msg: "Neovim configuration has been deployed successfully!"
