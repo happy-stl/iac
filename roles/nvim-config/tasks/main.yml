@@ -1,4 +1,10 @@
 ---
+- name: Install packages
+  package:
+    name: "{{ packages }}"
+    state: present
+  become: yes
+
 - name: Create .config/nvim directory
   file:
     path: "{{ nvim_config_dir }}"
@@ -10,4 +16,4 @@
     src: init.vim.j2
     dest: "{{ nvim_config_file }}"
     mode: "{{ nvim_config_mode }}"
-  notify: "Neovim configuration deployed"
+  notify: Neovim configuration deployed
