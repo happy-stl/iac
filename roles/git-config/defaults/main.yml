@@ -1,0 +1,25 @@
+---
+# Default variables for common role
+
+# Git configuration
+git_user_name: "{{ ansible_user_id }}"
+git_user_email: "{{ ansible_user_id }}@localhost"
+
+# Package lists
+packages:
+  - git
+
+# Directories to create
+directories:
+  - "{{ ansible_user_dir }}/Documents/Repositories"
+
+# Git aliases
+git_aliases:
+  - { alias: "amend", command: "!git ci --amend" }
+  - { alias: "br", command: "branch" }
+  - { alias: "st", command: "status" }
+  - { alias: "ci", command: "commit" }
+  - { alias: "co", command: "checkout" }
+  - { alias: "unstage", command: "reset HEAD --" }
+  - { alias: "last", command: "log -1 HEAD" }
+  - { alias: "visual", command: "!gitk" }

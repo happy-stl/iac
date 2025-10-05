@@ -1,0 +1,37 @@
+---
+# Default variables for mednafen-gaming role
+
+# Directory configuration
+applications_dir: "{{ ansible_user_dir }}/.local/share/applications"
+mednafen_config_dir: "{{ ansible_user_dir }}/.mednafen"
+rom_dir: "{{ ansible_user_dir }}/.games"
+
+# ROM download configuration
+# sonic_knuckles_rom_url: "https://example.com/path/to/sonic-knuckles.zip"
+
+# Audio settings
+audio_driver: "alsa"
+audio_device: "hw:0,3"
+audio_periods: 3
+audio_rate: 48000
+audio_buffer_time: 32
+
+# Graphics settings
+video_driver: "opengl"
+video_fs: 1
+video_xscale: 2
+video_yscale: 2
+video_xscalefs: 2
+video_yscalefs: 2
+
+# Genesis/Mega Drive settings
+md_xscale: 2
+md_yscale: 2
+md_special: "none"
+md_region: "overseas_ntsc"
+md_correct_aspect: 1
+md_ym2413: 1
+
+# Controller settings
+controller_port: "1"  # Default to js1, will be auto-detected
+input_port1: "gamepad"

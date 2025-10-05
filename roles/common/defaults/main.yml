@@ -1,0 +1,14 @@
+---
+# Default variables for common role
+
+# Package lists
+common_packages:
+  - curl
+  - htop
+  - tmux
+  - vim
+
+# Directories to create
+common_directories:
+  - "{{ ansible_user_dir }}/.config"
+  - "{{ ansible_user_dir }}/.local/bin"

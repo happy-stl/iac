@@ -1,0 +1,19 @@
+---
+- name: Install common packages
+  package:
+    name: "{{ common_packages }}"
+    state: present
+  become: yes
+
+- name: Create common directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ common_directories }}"
+
+- name: Deploy tmux configuration
+  template:
+    src: tmux.conf.j2
+    dest: "{{ ansible_user_dir }}/.tmux.conf"
+    mode: '0644'
