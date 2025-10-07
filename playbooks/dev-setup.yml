@@ -1,8 +1,0 @@
----
-- name: Configure Development Environment
-  hosts: localhost
-  connection: local
-  become: false
-  roles:
-    - git-config
-    - nvim-config

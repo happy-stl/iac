@@ -13,10 +13,62 @@
     mode: '0755'
   when: ansible_system == "Linux"
 
-- name: Deploy init.vim with auto-updating buffer configuration
+- name: Create lazy directory
+  file:
+    path: "{{ nvim_config_dir }}/lazy"
+    state: directory
+    mode: '0755'
+  when: ansible_system == "Linux" and use_lazy_nvim
+
+- name: Create lua directory structure
+  file:
+    path: "{{ nvim_config_dir }}/lua/plugins"
+    state: directory
+    mode: '0755'
+  when: ansible_system == "Linux" and use_lazy_nvim
+
+- name: Clone lazy.nvim
+  git:
+    repo: "{{ lazy_nvim_repo }}"
+    dest: "{{ lazy_nvim_path }}"
+    update: yes
+  when: ansible_system == "Linux" and use_lazy_nvim
+
+- name: Deploy init.lua with lazy.nvim configuration
   template:
-    src: init.vim.j2
+    src: init.lua.j2
     dest: "{{ nvim_config_file }}"
     mode: "{{ nvim_config_mode }}"
   notify: Neovim configuration deployed
-  when: ansible_system == "Linux"
+  when: ansible_system == "Linux" and use_lazy_nvim
+
+- name: Deploy plugins.lua template
+  template:
+    src: plugins.lua.j2
+    dest: "{{ nvim_config_dir }}/lua/plugins/init.lua"
+    mode: "{{ nvim_config_mode }}"
+  notify: Neovim configuration deployed
+  when: ansible_system == "Linux" and use_lazy_nvim
+
+- name: Deploy comment.lua template
+  template:
+    src: comment.lua.j2
+    dest: "{{ nvim_config_dir }}/lua/plugins/comment.lua"
+    mode: "{{ nvim_config_mode }}"
+  notify: Neovim configuration deployed
+  when: ansible_system == "Linux" and use_lazy_nvim and use_comment_nvim
+
+- name: Remove comment.lua file when disabled
+  file:
+    path: "{{ nvim_config_dir }}/lua/plugins/comment.lua"
+    state: absent
+  notify: Neovim configuration deployed
+  when: ansible_system == "Linux" and use_lazy_nvim and not use_comment_nvim
+
+- name: Deploy init.lua with basic configuration (no lazy.nvim)
+  template:
+    src: init.lua.j2
+    dest: "{{ nvim_config_file }}"
+    mode: "{{ nvim_config_mode }}"
+  notify: Neovim configuration deployed
+  when: ansible_system == "Linux" and not use_lazy_nvim

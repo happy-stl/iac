@@ -1,10 +1,20 @@
 ---
 # Default variables for nvim-config role
 
-nvim_config_dir: "{{ ansible_user_dir }}/.config/nvim"
-nvim_config_file: "{{ nvim_config_dir }}/init.vim"
-nvim_config_mode: '0644'
-
 # Package lists
 packages:
   - neovim
+  - git
+
+# Basic Neovim setup
+nvim_config_dir: "{{ ansible_user_dir }}/.config/nvim"
+nvim_config_file: "{{ nvim_config_dir }}/init.lua"
+nvim_config_mode: '0644'
+
+# Lazy.nvim configuration
+use_lazy_nvim: true
+lazy_nvim_repo: "https://github.com/folke/lazy.nvim.git"
+lazy_nvim_path: "{{ nvim_config_dir }}/lazy/lazy.nvim"
+
+# Plugin configurations
+use_comment_nvim: false

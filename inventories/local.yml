@@ -1,22 +1,34 @@
 ---
 all:
   children:
+    gaming:
+      hosts:
+        localhost:
+          ansible_connection: local
     development:
+      hosts:
+        localhost:
+          ansible_connection: local
       children:
         linux_dev:
           hosts:
             localhost:
               ansible_connection: local
-    windows_dev:
-      hosts:
-        # Uncomment and configure when you have a real Windows host
-        # windows-desktop:
-        #   ansible_host: 192.168.1.100  # Replace with actual Windows IP
-        #   ansible_connection: winrm
-        #   ansible_user: "{{ ansible_user | default('Administrator') }}"
-        #   ansible_password: "{{ ansible_password | default('') }}"
-        #   ansible_winrm_server_cert_validation: ignore
-        #   ansible_winrm_transport: basic
+            # Add actual Linux development machines here
+            # dev-linux-1:
+            #   ansible_host: 192.168.1.50
+            #   ansible_user: developer
+            #   ansible_ssh_private_key_file: ~/.ssh/dev_key
+        windows_dev:
+          hosts:
+            # Add actual Windows development machines here
+            # dev-windows-1:
+            #   ansible_host: 192.168.1.51
+            #   ansible_connection: winrm
+            #   ansible_user: "{{ ansible_user | default('Administrator') }}"
+            #   ansible_password: "{{ ansible_password | default('') }}"
+            #   ansible_winrm_server_cert_validation: ignore
+            #   ansible_winrm_transport: basic
     production:
       children:
         web_servers:

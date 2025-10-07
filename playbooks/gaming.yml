@@ -1,6 +1,6 @@
 ---
 - name: Configure Gaming Environment
-  hosts: localhost
+  hosts: gaming
   connection: local
   become: no
   roles:

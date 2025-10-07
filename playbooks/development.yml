@@ -2,14 +2,7 @@
 # Development Environment Playbook
 # This playbook targets only development hosts
 
-- name: Configure Gaming Environment (Linux Development)
-  hosts: linux_dev
-  connection: local
-  become: no
-  roles:
-    - mednafen-gaming
-
-- name: Development Environment Setup (Linux Development)
+- name: Linux Development Environment Setup
   hosts: linux_dev
   connection: local
   become: no
@@ -18,11 +11,6 @@
     - linux-dev
     - git-config
     - nvim-config
-
-- name: Windows WSL2 Setup (Windows Development)
-  hosts: windows_dev
-  connection: winrm
-  become: no
-  roles:
-    - windows-wsl2-setup
-    - windows-dev
+  vars:
+    use_lazy_nvim: true
+    use_comment_nvim: true
