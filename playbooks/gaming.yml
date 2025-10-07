@@ -5,3 +5,4 @@
   become: no
   roles:
     - mednafen-gaming
+    - dark-forces

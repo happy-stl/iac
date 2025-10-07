@@ -1,0 +1,143 @@
+---
+- name: Set role-specific variables
+  set_fact:
+    role_name: "dark-forces"
+    applications_dir: "{{ dark_forces_applications_dir }}"
+    package: "{{ dark_forces_package }}"
+    data_dir: "{{ dark_forces_data_dir }}"
+    data_url: "{{ dark_forces_data_url }}"
+
+- name: Add flathub repository
+  command: flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  become: yes
+  when: ansible_system == "Linux"
+
+- name: Collect installed flatpaks
+  command: flatpak list --app --columns=application
+  register: installed_flatpaks
+  become: yes
+  when: ansible_system == "Linux"
+  failed_when: false
+
+- name: Install package
+  command: flatpak install -y flathub {{ package }}
+  become: yes
+  when:
+    - ansible_system == "Linux"
+    - package is defined
+    - package not in installed_flatpaks.stdout
+
+- name: Create data directory
+  file:
+    path: "{{ data_dir }}"
+    state: directory
+    mode: '0755'
+  when: ansible_system == "Linux"
+
+- name: Check if Dark Forces installed
+  stat:
+    path: "{{ data_dir }}/DARK.GOB"
+  register: dark_gob_file
+  when:
+    - ansible_system == "Linux"
+    - data_dir is defined
+
+- name: Download Dark Forces
+  get_url:
+    url: "{{ data_url }}"
+    dest: "{{ data_dir }}/Dark Forces.zip"
+    mode: '0644'
+  when:
+    - ansible_system == "Linux"
+    - data_url is defined
+    - data_url != ""
+    - data_dir is defined
+    - not dark_gob_file.stat.exists
+
+- name: Check if Dark Forces.zip exists
+  stat:
+    path: "{{ data_dir }}/Dark Forces.zip"
+  register: dark_forces_zip
+  when:
+    - ansible_system == "Linux"
+    - data_dir is defined
+
+- name: Create temp extraction directory
+  file:
+    path: "{{ data_dir }}/temp_extract"
+    state: directory
+    mode: '0755'
+  when:
+    - ansible_system == "Linux"
+    - data_dir is defined
+    - dark_forces_zip.stat.exists
+
+- name: Extract Dark Forces
+  unarchive:
+    src: "{{ data_dir }}/Dark Forces.zip"
+    dest: "{{ data_dir }}/temp_extract"
+    remote_src: yes
+  when:
+    - ansible_system == "Linux"
+    - data_dir is defined
+    - dark_forces_zip.stat.exists
+
+- name: Move extracted files (strip first directory level)
+  shell: |
+    if [ -d "{{ data_dir }}/temp_extract" ]; then
+      # Find the first subdirectory and move its contents up one level
+      first_dir=$(find "{{ data_dir }}/temp_extract" -maxdepth 1 -type d | tail -n +2 | head -n 1)
+      if [ -n "$first_dir" ]; then
+        mv "$first_dir"/* "{{ data_dir }}/" 2>/dev/null || true
+        rmdir "$first_dir" 2>/dev/null || true
+      fi
+      rmdir "{{ data_dir }}/temp_extract" 2>/dev/null || true
+    fi
+  when:
+    - ansible_system == "Linux"
+    - data_dir is defined
+    - dark_forces_zip.stat.exists
+
+- name: Clean up download
+  file:
+    path: "{{ data_dir }}/Dark Forces.zip"
+    state: absent
+  when:
+    - ansible_system == "Linux"
+    - data_dir is defined
+    - dark_forces_zip.stat.exists
+
+# - name: Create configuration file
+#   copy:
+#     content: |
+#       # TheForceEngine configuration
+#     dest: "{{ data_dir }}/mednafen.cfg"
+#     mode: '0644'
+#   when: ansible_system == "Linux"
+
+# - name: Create applications directory
+#   file:
+#     path: "{{ applications_dir }}"
+#     state: directory
+#     mode: '0755'
+#   when: ansible_system == "Linux"
+
+# - name: Create desktop launcher
+#   copy:
+#     content: |
+#       [Desktop Entry]
+#       Version=1.0
+#       Type=Application
+#       Name=Dark Forces
+#       Comment=Play Dark Forces with TheForceEngine
+#       Categories=Game;ActionGame;Shooter;Emulator;
+#       Keywords=STAR;WARS;Dark;Forces;Trooper;FPS;first;person;shooter;Kyle;Katarn;Jan;Ors;Death;Star;
+#       Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=io.github.theforceengine.tfe.sh io.github.theforceengine.tfe
+#       Icon=io.github.theforceengine.tfe
+#       StartupWMClass=tfelnx
+#       X-Flatpak=io.github.theforceengine.tfe
+#       Terminal=false
+#       StartupNotify=true
+#     dest: "{{ applications_dir }}/dark-forces.desktop"
+#     mode: '0755'
+#   when: ansible_system == "Linux"

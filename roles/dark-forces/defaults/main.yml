@@ -1,0 +1,9 @@
+---
+# Default variables for theforceengine role
+
+dark_forces_package: "io.github.theforceengine.tfe"
+
+# Directory configuration
+dark_forces_applications_dir: "{{ ansible_user_dir }}/.local/share/applications"
+dark_forces_data_dir: "{{ ansible_user_dir }}/.var/app/{{ dark_forces_package }}/data"
+dark_forces_data_url: ""

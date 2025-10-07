@@ -1,0 +1,53 @@
+#!/bin/bash
+# Controller Selection Script
+
+echo "🎮 Controller Detection and Selection"
+echo "====================================="
+echo ""
+
+# Find all available joystick devices
+js_devices=()
+for js in /dev/input/js*; do
+  if [ -c "$js" ]; then
+    js_devices+=("$js")
+  fi
+done
+
+if [ ${#js_devices[@]} -eq 0 ]; then
+  echo "❌ No joystick devices found!"
+  echo "Please connect your controller and run this script again."
+  echo "0"
+  exit 0
+elif [ ${#js_devices[@]} -eq 1 ]; then
+  echo "✅ Found 1 controller: ${js_devices[0]}"
+  echo "Using: ${js_devices[0]}"
+  echo "${js_devices[0]##*js}"
+  exit 0
+fi
+
+echo "✅ Found ${#js_devices[@]} controllers:"
+echo ""
+
+for i in "${!js_devices[@]}"; do
+  js="${js_devices[$i]}"
+  js_num="${js##*js}"
+  echo "[$((i+1))] $js"
+done
+
+echo ""
+echo "Please select which controller to use:"
+
+while true; do
+  read -p "Enter controller number (1-${#js_devices[@]}): " choice
+  
+  if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#js_devices[@]}" ]; then
+    selected_js="${js_devices[$((choice-1))]}"
+    js_num="${selected_js##*js}"
+    echo ""
+    echo "✅ Selected: $selected_js (js$js_num)"
+    echo "$js_num"
+    exit 0
+  else
+    echo "❌ Invalid selection. Please enter a number between 1 and ${#js_devices[@]}."
+  fi
+done
