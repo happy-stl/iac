@@ -12,7 +12,6 @@ rom_dir: "{{ ansible_user_dir }}/.games"
 # Audio settings
 audio_driver: "alsa"
 audio_device: "hw:0,3"
-audio_periods: 3
 audio_rate: 48000
 audio_buffer_time: 32
 
@@ -30,8 +29,3 @@ md_yscale: 2
 md_special: "none"
 md_region: "overseas_ntsc"
 md_correct_aspect: 1
-md_ym2413: 1
-
-# Controller settings
-controller_port: "1"  # Default to js1, will be auto-detected
-input_port1: "gamepad"
