@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and edit. terraform.tfvars is gitignored.
+
+# Region close to you keeps latency low. See `doctl compute region list`.
+region = "nyc3"
+
+# Name of the DigitalOcean Project ("space") that will hold only the VPN infra.
+# project_name = "wireguard-vpn"
+
+# Cheapest droplet (~$4/mo). Bump if you want more throughput.
+# size = "s-1vcpu-1gb"
+
+# SSH public key for droplet admin access.
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+
+# Lock SSH down to your current public IP for better security, e.g.:
+# ssh_allowed_cidrs = ["203.0.113.7/32"]
+
+# Provide the DO token here OR (preferred) export DIGITALOCEAN_TOKEN.
+# do_token = "dop_v1_xxxxxxxx"

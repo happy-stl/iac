@@ -1,4 +1,0 @@
----
-- name: Common role completed
-  debug:
-    msg: "Common role setup completed successfully!"
