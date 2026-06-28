@@ -61,6 +61,11 @@ guard-env:
 		echo "run 'make list-envs' to see available environments"; \
 		exit 1; \
 	fi
+	@if ! ls "$(ENV_DIR)"/*.tf >/dev/null 2>&1; then \
+		echo "error: $(ENV_DIR) has no Terraform config (placeholder environment?)"; \
+		echo "run 'make list-envs' to see usable environments"; \
+		exit 1; \
+	fi
 
 tf-init: guard-env ## Initialize the selected environment
 	$(TF_CHDIR) init $(ARGS)

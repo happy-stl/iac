@@ -28,9 +28,9 @@ variable "ssh_public_key" {
 }
 
 variable "ssh_allowed_cidrs" {
-  description = "CIDRs allowed to reach SSH (port 22). Restrict to your IP for better security."
+  description = "CIDRs allowed to reach SSH (port 22). Empty (the default) opens no SSH rule at all; set to your IP (e.g. [\"203.0.113.7/32\"]) to allow admin access."
   type        = list(string)
-  default     = ["0.0.0.0/0", "::/0"]
+  default     = []
 }
 
 variable "listen_port" {

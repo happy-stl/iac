@@ -16,7 +16,6 @@ terraform.rc
 
 # Generated secrets / client configs
 **/generated/
-*.conf
 
 # OS / editor
 .DS_Store

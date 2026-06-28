@@ -36,9 +36,9 @@ variable "ssh_public_key_path" {
 }
 
 variable "ssh_allowed_cidrs" {
-  description = "CIDRs allowed to SSH into the droplet. Restrict to your IP for better security."
+  description = "CIDRs allowed to SSH into the droplet. Empty (the default) opens no SSH; set to your IP (e.g. [\"203.0.113.7/32\"]) to allow admin access."
   type        = list(string)
-  default     = ["0.0.0.0/0", "::/0"]
+  default     = []
 }
 
 variable "client_config_path" {

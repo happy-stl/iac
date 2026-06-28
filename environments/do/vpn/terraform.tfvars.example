@@ -12,7 +12,7 @@ region = "nyc3"
 # SSH public key for droplet admin access.
 ssh_public_key_path = "~/.ssh/id_ed25519.pub"
 
-# Lock SSH down to your current public IP for better security, e.g.:
+# SSH is closed by default. To allow admin access, set your current public IP:
 # ssh_allowed_cidrs = ["203.0.113.7/32"]
 
 # Provide the DO token here OR (preferred) export DIGITALOCEAN_TOKEN.

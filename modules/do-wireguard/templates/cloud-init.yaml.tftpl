@@ -17,7 +17,7 @@ write_files:
     owner: root:root
     content: |
       [Interface]
-      Address = ${server_vpn_ip}/24
+      Address = ${server_vpn_ip}/${server_vpn_prefix}
       ListenPort = ${listen_port}
       PrivateKey = ${server_private_key}
       PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; ip6tables -A FORWARD -i %i -j ACCEPT; ip6tables -t nat -A POSTROUTING -o eth0 -j MASQUERADE

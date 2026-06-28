@@ -11,7 +11,7 @@ and infrastructure.
 
 ```
 modules/                          Reusable Terraform modules (<provider>-<thing>)
-  digitalocean-wireguard/         WireGuard VPN droplet + DO Project, via cloud-init
+  do-wireguard/                   WireGuard VPN droplet + DO Project, via cloud-init
 environments/                     Root configs you run (terraform apply)
   do/                             DigitalOcean
     vpn/                          Cheap WireGuard VPN (its own DO Project)

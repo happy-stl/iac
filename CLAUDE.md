@@ -10,7 +10,7 @@ separate `ansible` repo — do not add Ansible here.
 
 ## Repository structure
 
-```
+```text
 modules/<provider>-<thing>/        Reusable, provider-specific modules
 environments/<provider>/<project>/ Root configs (one Terraform state each)
 scripts/                           Helper scripts (e.g. VPN connect/disconnect)
@@ -24,7 +24,7 @@ scripts/                           Helper scripts (e.g. VPN connect/disconnect)
   `environments/do/vpn`, `environments/gcp/project_name_1`,
   `environments/do/project_name_2`.
 - **Modules are reusable building blocks**, named `modules/<provider>-<thing>`
-  (e.g. `modules/digitalocean-wireguard`). Environments call modules via a
+  (e.g. `modules/do-wireguard`). Environments call modules via a
   relative source path. From `environments/<provider>/<project>/` the repo root
   is three levels up: `source = "../../../modules/<name>"`.
 

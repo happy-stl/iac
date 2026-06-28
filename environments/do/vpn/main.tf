@@ -1,5 +1,5 @@
 module "vpn" {
-  source = "../../../modules/digitalocean-wireguard"
+  source = "../../../modules/do-wireguard"
 
   name              = var.name
   project_name      = var.project_name

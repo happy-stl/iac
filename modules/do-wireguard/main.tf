@@ -15,10 +15,15 @@ resource "digitalocean_droplet" "this" {
   ssh_keys = [digitalocean_ssh_key.this.fingerprint]
   tags     = var.tags
 
+  # The default client config is a dual-stack full tunnel (0.0.0.0/0, ::/0), so
+  # the droplet needs IPv6 to actually carry the client's IPv6 traffic.
+  ipv6 = true
+
   user_data = templatefile("${path.module}/templates/cloud-init.yaml.tftpl", {
     server_private_key = wireguard_asymmetric_key.server.private_key
     client_public_key  = wireguard_asymmetric_key.client.public_key
     server_vpn_ip      = var.server_vpn_ip
+    server_vpn_prefix  = split("/", var.vpn_subnet_cidr)[1]
     client_vpn_ip      = var.client_vpn_ip
     listen_port        = var.listen_port
   })
@@ -28,10 +33,15 @@ resource "digitalocean_firewall" "this" {
   name        = var.name
   droplet_ids = [digitalocean_droplet.this.id]
 
-  inbound_rule {
-    protocol         = "tcp"
-    port_range       = "22"
-    source_addresses = var.ssh_allowed_cidrs
+  # SSH is only opened when the caller explicitly provides source CIDRs.
+  # WireGuard doesn't need SSH after cloud-init, so the secure default is closed.
+  dynamic "inbound_rule" {
+    for_each = length(var.ssh_allowed_cidrs) > 0 ? [1] : []
+    content {
+      protocol         = "tcp"
+      port_range       = "22"
+      source_addresses = var.ssh_allowed_cidrs
+    }
   }
 
   inbound_rule {
