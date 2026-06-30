@@ -1,7 +1,0 @@
----
-- name: Configure Gaming Environment
-  hosts: localhost
-  connection: local
-  become: yes
-  roles:
-    - mednafen-gaming
