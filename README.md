@@ -34,7 +34,7 @@ make tf-init tf-plan tf-apply env=do/vpn   # full path
 make tf-apply env=vpn                       # 'vpn' is an alias for do/vpn
 make tf-destroy env=do/vpn
 make tf-plan env=do/vpn ARGS="-target=module.vpn"
-make list-envs                              # list environments + aliases
+make list                                   # list environments + aliases
 make help
 ```
 

@@ -30,7 +30,7 @@ TF_CHDIR := $(TF) -chdir=$(ENV_DIR)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help list-envs guard-env \
+.PHONY: help list guard-env \
         tf-init tf-plan tf-apply tf-destroy tf-validate tf-output tf-refresh \
         tf-show tf-fmt tf-fmt-check tf-clean
 
@@ -42,9 +42,9 @@ help: ## Show this help
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
 	@echo ""
 	@echo "Environments (env=<name>):"
-	@$(MAKE) --no-print-directory list-envs
+	@$(MAKE) --no-print-directory list
 
-list-envs: ## List available environments
+list: ## List available environments
 	@find $(ENVS_DIR) -name '*.tf' -exec dirname {} \; 2>/dev/null | \
 		sort -u | sed 's#^$(ENVS_DIR)/#  #' || true
 	@echo "  aliases: vpn -> do/vpn"
@@ -53,17 +53,17 @@ list-envs: ## List available environments
 guard-env:
 	@if [ -z "$(ENV)" ]; then \
 		echo "error: set env=<name>, e.g. make tf-plan env=vpn"; \
-		echo "run 'make list-envs' to see available environments"; \
+		echo "run 'make list' to see available environments"; \
 		exit 1; \
 	fi
 	@if [ ! -d "$(ENV_DIR)" ]; then \
 		echo "error: environment directory not found: $(ENV_DIR)"; \
-		echo "run 'make list-envs' to see available environments"; \
+		echo "run 'make list' to see available environments"; \
 		exit 1; \
 	fi
 	@if ! ls "$(ENV_DIR)"/*.tf >/dev/null 2>&1; then \
 		echo "error: $(ENV_DIR) has no Terraform config (placeholder environment?)"; \
-		echo "run 'make list-envs' to see usable environments"; \
+		echo "run 'make list' to see usable environments"; \
 		exit 1; \
 	fi
 
