@@ -1,0 +1,70 @@
+---
+- name: Check the print server's certificate is on the controller
+  stat:
+    path: "{{ siue_print_server_cert }}"
+  register: siue_print_cert_stat
+  delegate_to: localhost
+  become: no
+
+- name: Stop if the print server has not been set up
+  assert:
+    that: siue_print_cert_stat.stat.exists
+    fail_msg: >-
+      {{ siue_print_server_cert }} does not exist on the controller. Run the
+      university playbook on the Linux print server with this PC's address in
+      the Windows list first, or set siue_print_server_host and
+      siue_print_server_cert.
+    quiet: yes
+
+- name: Copy the print server's certificate to the PC
+  ansible.windows.win_copy:
+    content: "{{ lookup('file', siue_print_server_cert) }}\n"
+    dest: C:\Windows\Temp\siue-print-server.crt
+
+# Windows only connects to an HTTPS printer whose certificate it trusts.
+- name: Trust the print server's certificate
+  ansible.windows.win_certificate_store:
+    path: C:\Windows\Temp\siue-print-server.crt
+    store_name: Root
+    store_location: LocalMachine
+    state: present
+
+- name: Remove the copied certificate
+  ansible.windows.win_file:
+    path: C:\Windows\Temp\siue-print-server.crt
+    state: absent
+
+- name: Install the PostScript class driver
+  ansible.windows.win_shell: |
+    $name = '{{ siue_print_windows_driver }}'
+    if (Get-PrinterDriver -Name $name -ErrorAction SilentlyContinue) { 'present'; exit }
+    Add-PrinterDriver -Name $name
+    'added'
+  register: siue_print_driver
+  changed_when: "'added' in siue_print_driver.stdout"
+
+# An Internet Port printer, as "Select a shared printer by name" makes. Windows'
+# own IPP route (Add-Printer -IppURL) uses the IPP Class Driver and stalls
+# against CUPS, so the port and driver are given explicitly.
+- name: Add the shared copier queues
+  ansible.windows.win_shell: |
+    $name = '{{ item.name }}'
+    $url  = 'https://{{ siue_print_server_host }}:631/printers/{{ item.queue }}'
+    $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
+    if ($existing -and $existing.PortName -eq $url) { 'present'; exit }
+    if ($existing) { Remove-Printer -Name $name }
+    $p = Start-Process rundll32.exe -Wait -PassThru -ArgumentList @(
+      'printui.dll,PrintUIEntry', '/if', '/q',
+      '/b', "`"$name`"", '/r', "`"$url`"", '/m', '"{{ siue_print_windows_driver }}"')
+    for ($i = 0; $i -lt 30 -and -not (Get-Printer -Name $name -ErrorAction SilentlyContinue); $i++) {
+      Start-Sleep -Seconds 1
+    }
+    if (-not (Get-Printer -Name $name -ErrorAction SilentlyContinue)) {
+      throw "printui could not add $name for $url (exit code $($p.ExitCode))"
+    }
+    'added'
+  register: siue_print_windows_added
+  changed_when: "'added' in siue_print_windows_added.stdout"
+  loop: "{{ siue_print_windows_queues }}"
+  loop_control:
+    label: "{{ item.name }}"

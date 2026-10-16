@@ -4,13 +4,16 @@
 #   ansible-playbook -K playbooks/university.yml
 #   siue-keytab        # once, then after every campus password change
 #
+# The second play connects Windows PCs listed in the windows_dev inventory group
+# (see README-Windows.md for WinRM) to the queues this machine shares.
+#
 # Prompts for everything personal, so nothing about you is kept in the
 # repository. Press Enter to accept a prompt's default. To skip the prompts,
 # pass the answers instead:
 #
 #   ansible-playbook -K playbooks/university.yml \
 #     -e siue_campus_user_input=jdoe -e siue_print_account_id=12345 \
-#     -e siue_print_share_clients_csv=146.163.150.99
+#     -e siue_print_share_clients_csv=192.0.2.10
 - name: University (SIUE) Setup (Linux Development)
   hosts: linux_dev
   connection: local
@@ -30,5 +33,17 @@
   vars:
     siue_krb5_user: "{{ siue_campus_user_input | trim or ansible_user_id }}"
     siue_print_share_clients: "{{ siue_print_share_clients_csv | split(',') | map('trim') | reject('equalto', '') | list }}"
+  roles:
+    - university
+
+# Windows PCs in windows_dev that the Linux machine above shares the copiers
+# with. Run from that Linux machine: its CUPS certificate is read from the
+# controller and trusted on each PC, then the shared queues are added.
+#
+#   ansible-playbook playbooks/university.yml --limit windows_dev
+- name: University (SIUE) Setup (Windows Development)
+  hosts: windows_dev
+  connection: winrm
+  become: no
   roles:
     - university

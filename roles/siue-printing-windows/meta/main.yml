@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: William Grim
+  description: Connect a Windows PC to the SIUE copier queues a Linux machine shares with it over IPPS
+  license: MIT
+  min_ansible_version: "2.11"
+  platforms:
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - printing
+    - windows
+    - siue
+
+dependencies: []

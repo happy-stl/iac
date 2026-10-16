@@ -1,0 +1,24 @@
+---
+# Default variables for siue-printing-windows role
+#
+# Connects a Windows PC to the queues a Linux machine shares with it (the
+# siue-printing role's "-win" queues). Run it from that Linux machine: its
+# CUPS certificate is read from the Ansible controller.
+
+# The Linux print server's name as the PC should use it. It must be one of the
+# names in the server's certificate. Defaults to the controller's own name.
+siue_print_server_host: "{{ lookup('pipe', 'hostname -f') }}"
+
+# The server's CUPS certificate, on the controller.
+siue_print_server_cert: "/etc/cups/ssl/{{ siue_print_server_host }}.crt"
+
+# The shared queues to add, and what to call them on Windows.
+siue_print_windows_queues:
+  - queue: ENG2ndFloorKyocera-win
+    name: ENG 2nd Floor Copier
+  - queue: ENG3rdFloorKyocera-win
+    name: ENG 3rd Floor Copier
+
+# A plain PostScript driver: Windows sends PostScript, and the Linux machine
+# renders it with the Kyocera driver and adds the job-accounting code.
+siue_print_windows_driver: Microsoft PS Class Driver

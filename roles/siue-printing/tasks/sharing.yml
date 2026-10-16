@@ -102,6 +102,25 @@
   become: yes
   notify: Restart cups
 
+# The web interface's pages (printers, queues, jobs) live under <Location />.
+# The listed clients may view them over HTTPS; /admin keeps its own rules, so
+# nothing can be changed from them. The whole block is rewritten rather than
+# marked, because cupsctl drops comment markers.
+- name: Let the listed clients view the CUPS web pages
+  replace:
+    path: /etc/cups/cupsd.conf
+    regexp: '^<Location />\n(?:(?!</Location>).*\n)*</Location>\n'
+    replace: |
+      <Location />
+        Order allow,deny
+      {% for client in siue_print_share_clients %}
+        Allow from {{ client }}
+      {% endfor %}
+        Encryption Required
+      </Location>
+  become: yes
+  notify: Restart cups
+
 - name: Check the edited CUPS configuration
   command: cupsd -t
   changed_when: false

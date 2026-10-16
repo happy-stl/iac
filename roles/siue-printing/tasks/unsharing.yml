@@ -42,6 +42,17 @@
   become: yes
   notify: Restart cups
 
+- name: Close the CUPS web pages to other machines
+  replace:
+    path: /etc/cups/cupsd.conf
+    regexp: '^<Location />\n(?:(?!</Location>).*\n)*</Location>\n'
+    replace: |
+      <Location />
+        Order allow,deny
+      </Location>
+  become: yes
+  notify: Restart cups
+
 - name: Listen for IPP on this machine only
   lineinfile:
     path: /etc/cups/cupsd.conf

@@ -55,8 +55,61 @@ accept a default:
 | Windows PCs to share with | none                  | IPv4 addresses, comma-separated, that may print through you |
 
 `siue-keytab` asks for your campus password once, so a ticket can be kept fresh for you (see
-[Keep your ticket fresh](#keep-your-ticket-fresh)). If you shared the queues with a Windows PC, go
-on to [Connect the Windows PC](#connect-the-windows-pc).
+[Keep your ticket fresh](#keep-your-ticket-fresh)).
+
+## Connecting a Windows PC with Ansible
+
+If you shared the queues with a Windows PC, the same playbook can connect it: it trusts the Linux
+machine's certificate on the PC and adds both copiers. Run it from the Linux print server, which
+logs in to the PC with your Kerberos ticket, over WinRM on HTTPS.
+
+**Once, on the PC**, in PowerShell run as Administrator. Use the PC's name in the campus domain and
+your Linux machine's IP address:
+
+```powershell
+$fqdn  = '<pc-name>.campus.siue.edu'
+$linux = '<linux-ip>'
+Enable-PSRemoting -Force
+$cert = New-SelfSignedCertificate -DnsName $fqdn, $env:COMPUTERNAME `
+          -CertStoreLocation Cert:\LocalMachine\My -NotAfter (Get-Date).AddYears(10)
+New-Item -Path WSMan:\localhost\Listener -Transport HTTPS -Address * `
+  -CertificateThumbPrint $cert.Thumbprint -Force
+New-NetFirewallRule -Name 'WINRM-HTTPS-In-TCP-SIUE' -DisplayName 'WinRM over HTTPS (Ansible)' `
+  -Direction Inbound -Protocol TCP -LocalPort 5986 -RemoteAddress $linux -Action Allow
+Disable-NetFirewallRule -Name 'WINRM-HTTP-In-TCP*'
+```
+
+**Once, on the Linux machine**, install the WinRM client and describe the PC in an inventory file of
+your own, outside the repository (here `~/.config/siue/windows.yml`):
+
+```bash
+sudo dnf install -y python3-winrm python3-requests-kerberos python3-kerberos
+mkdir -p ~/.config/siue
+cat > ~/.config/siue/windows.yml <<'EOF'
+all:
+  children:
+    windows_dev:
+      hosts:
+        <pc-name>.campus.siue.edu:
+          ansible_connection: winrm
+          ansible_port: 5986
+          ansible_winrm_scheme: https
+          ansible_winrm_transport: kerberos
+          ansible_winrm_server_cert_validation: ignore
+          ansible_user: <campus-username>@CAMPUS.SIUE.EDU
+          ansible_become: false
+EOF
+```
+
+The PC's certificate is self-signed, so Ansible does not check it against a trusted root. Kerberos
+still authenticates both ends, and the session is bound to the TLS channel.
+
+**Then, and whenever the Linux machine's certificate changes:**
+
+```bash
+ansible-playbook -i inventories/local.yml -i ~/.config/siue/windows.yml \
+  playbooks/university.yml --limit windows_dev
+```
 
 The rest of this guide is the same setup done by hand.
 
@@ -339,6 +392,10 @@ BLOCK=$(mktemp)
 sudo sed -i "/^<Location \/>$/e cat $BLOCK" /etc/cups/cupsd.conf
 rm "$BLOCK"
 
+# The web pages (printers, queues, jobs) for the PC too, over HTTPS; /admin stays local
+sudo sed -i "/^<Location \/>\$/,/^<\/Location>\$/c\\<Location />\n  Order allow,deny\n  Allow from $WINPC\n  Encryption Required\n</Location>" \
+  /etc/cups/cupsd.conf
+
 sudo systemctl enable --now avahi-daemon cups
 sudo cupsd -t && sudo systemctl restart cups
 ```
@@ -370,10 +427,11 @@ curl -sk -o /dev/null -w '%{http_code}\n' \
 
 ## 1. Trust the Linux machine's certificate
 
-First note the certificate's fingerprint on the **Linux machine**:
+The Ansible play above does this step for you. By hand, first note the certificate's thumbprint on
+the **Linux machine**:
 
 ```bash
-sudo openssl x509 -in /etc/cups/ssl/$(hostname -f).crt -noout -fingerprint -sha256 | tr -d :
+openssl x509 -in /etc/cups/ssl/$(hostname -f).crt -noout -fingerprint -sha1 | sed 's/.*=//; s/://g'
 ```
 
 Then, on the **Windows PC**, in PowerShell run as Administrator, fetch the certificate and compare:
@@ -385,16 +443,20 @@ $ssl = [Net.Security.SslStream]::new($tcp.GetStream(), $false, { $true })
 $ssl.AuthenticateAsClient($h)
 $cert = [Security.Cryptography.X509Certificates.X509Certificate2]::new($ssl.RemoteCertificate)
 $tcp.Close()
-[BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($cert.RawData)) -replace '-'
+$cert.Thumbprint
 ```
 
-Only if the two fingerprints match, trust it:
+Only if the two thumbprints match, trust it, then check that Windows now accepts the connection:
 
 ```powershell
 $path = "$env:TEMP\$h.cer"
 [IO.File]::WriteAllBytes($path, $cert.Export('Cert'))
 Import-Certificate -FilePath $path -CertStoreLocation Cert:\LocalMachine\Root
+Invoke-WebRequest -UseBasicParsing "https://${h}:631/printers/ENG3rdFloorKyocera-win" | Select-Object StatusCode
 ```
+
+`StatusCode : 200` means the PC trusts the certificate. An error about a "trust relationship" means
+the import did not take: it needs an Administrator PowerShell.
 
 ## 2. Add each printer by name
 
@@ -416,9 +478,9 @@ Import-Certificate -FilePath $path -CertStoreLocation Cert:\LocalMachine\Root
 ## 3. Print a test page
 
 Your Windows print queue empties within a second or two even for a large job: it only holds a job
-until the Linux machine has it. To follow a job from there, run `lpstat -o` on the Linux machine, or
-open `https://<linux-host>:631/printers/ENG3rdFloorKyocera-win` in a browser and look under
-**Jobs**.
+until the Linux machine has it. To follow a job from there, open `https://<linux-host>:631/` in a
+browser on the PC (**Printers** and **Jobs**), or run `lpstat -o` on the Linux machine. Type the
+`https://`: without it the browser tries plain HTTP first, and CUPS takes a second to redirect.
 
 # Day to day
 
@@ -449,24 +511,28 @@ rpcclient --use-kerberos=required kyocera.campus.siue.edu \
 
 # What this installs and changes
 
-| Item                                               | Purpose                                                                  |
-| -------------------------------------------------- | ------------------------------------------------------------------------ |
-| `cups`, `samba-client`, `krb5-workstation`         | Print system, SMB tools, and `kinit`/`klist`                             |
-| `python3-samba`                                    | Print Spooler client for the `spoolss` backend                           |
-| `python3-pypdf`                                    | Undeclared dependency of Kyocera's pre-filter                            |
-| `kyodialog-10.1`                                   | Kyocera driver, PPDs and filters; also a status daemon (`knmd`) at login |
-| `/etc/krb5.conf.d/campus-siue.conf`                | Campus realm settings                                                    |
-| `/usr/lib/cups/backend/spoolss`                    | Submits jobs through the Print Spooler interface                         |
-| `ENG2ndFloorKyocera`, `ENG3rdFloorKyocera`         | Local queues, printing as whoever submits the job                        |
-| `cups.service` enabled                             | CUPS runs from boot                                                      |
-| `/usr/local/bin/siue-keytab`, `siue-krb-refresh`   | Make the keytab; refresh the ticket                                      |
-| `siue-krb-refresh.timer` (user unit), lingering on | Hourly ticket refresh, with or without a login                           |
-| `~/.config/siue/campus-user`                       | Your CAMPUS username, for the two commands                               |
-| `/var/kerberos/krb5/user/<uid>/client.keytab`      | Your keytab, mode 0600                                                   |
-| **Windows sharing only**                           |                                                                          |
-| `/usr/lib/cups/backend/spoolss-<user>`             | Prints with your ticket for network jobs                                 |
-| `ENG2ndFloorKyocera-win`, `ENG3rdFloorKyocera-win` | Shared queues                                                            |
-| `/etc/cups/ssl/<host>.crt`, `.key`                 | Long-lived certificate for HTTPS                                         |
-| `/etc/cups/cupsd.conf`                             | Network listener, advertising, never idles out, per-IP HTTPS-only access |
-| `avahi`, `openssl`; `avahi-daemon` enabled         | Advertising, and making the certificate                                  |
-| firewalld rich rule                                | TCP 631 from the Windows PC only                                         |
+| Item                                                   | Purpose                                                                                                         |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `cups`, `samba-client`, `krb5-workstation`             | Print system, SMB tools, and `kinit`/`klist`                                                                    |
+| `python3-samba`                                        | Print Spooler client for the `spoolss` backend                                                                  |
+| `python3-pypdf`                                        | Undeclared dependency of Kyocera's pre-filter                                                                   |
+| `kyodialog-10.1`                                       | Kyocera driver, PPDs and filters; also a status daemon (`knmd`) at login                                        |
+| `/etc/krb5.conf.d/campus-siue.conf`                    | Campus realm settings                                                                                           |
+| `/usr/lib/cups/backend/spoolss`                        | Submits jobs through the Print Spooler interface                                                                |
+| `ENG2ndFloorKyocera`, `ENG3rdFloorKyocera`             | Local queues, printing as whoever submits the job                                                               |
+| `cups.service` enabled                                 | CUPS runs from boot                                                                                             |
+| `/usr/local/bin/siue-keytab`, `siue-krb-refresh`       | Make the keytab; refresh the ticket                                                                             |
+| `siue-krb-refresh.timer` (user unit), lingering on     | Hourly ticket refresh, with or without a login                                                                  |
+| `~/.config/siue/campus-user`                           | Your CAMPUS username, for the two commands                                                                      |
+| `/var/kerberos/krb5/user/<uid>/client.keytab`          | Your keytab, mode 0600                                                                                          |
+| **Windows sharing only**                               |                                                                                                                 |
+| `/usr/lib/cups/backend/spoolss-<user>`                 | Prints with your ticket for network jobs                                                                        |
+| `ENG2ndFloorKyocera-win`, `ENG3rdFloorKyocera-win`     | Shared queues                                                                                                   |
+| `/etc/cups/ssl/<host>.crt`, `.key`                     | Long-lived certificate for HTTPS                                                                                |
+| `/etc/cups/cupsd.conf`                                 | Network listener, advertising, never idles out, HTTPS-only access for the PC to the shared queues and web pages |
+| `avahi`, `openssl`; `avahi-daemon` enabled             | Advertising, and making the certificate                                                                         |
+| firewalld rich rule                                    | TCP 631 from the Windows PC only                                                                                |
+| **Windows PC (Ansible play)**                          |                                                                                                                 |
+| The Linux machine's certificate in `LocalMachine\Root` | Lets Windows trust the HTTPS printers                                                                           |
+| `Microsoft PS Class Driver`                            | Driver for both printers                                                                                        |
+| `ENG 2nd Floor Copier`, `ENG 3rd Floor Copier`         | Printers on Internet ports, `https://<linux-host>:631/printers/…-win`                                           |
