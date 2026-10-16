@@ -101,24 +101,38 @@
   become: yes
   when: siue_print_share_clients | length > 0
 
-- name: Read each queue's current device
-  command: lpstat -v {{ item.name }}{{ '-win' if item.shared else '' }}
-  register: siue_print_current
-  changed_when: false
-  failed_when: false
-  loop: "{{ siue_print_all_queues }}"
-  loop_control:
-    label: "{{ item.name }}{{ '-win' if item.shared else '' }}"
-
 # Local queues authenticate as whoever submitted the job (negotiate). Shared
 # twins take no authentication from the client and always use
 # siue_print_user's ticket through the smb-<user> backend.
-- name: Create the print queues
+- name: Compare each queue with its wanted settings
+  script: >-
+    queue-matches.py {{ queue | quote }} {{ (siue_kyocera_ppd_dir ~ '/' ~ item.ppd) | quote }}
+    {{ ('device-uri=' ~ uri) | quote }}
+    {{ ('printer-info=' ~ description) | quote }}
+    {{ ('printer-location=' ~ item.location) | quote }}
+    {{ ('auth-info-required=' ~ ('none' if item.shared else 'negotiate')) | quote }}
+    {{ ('printer-is-shared=' ~ (item.shared | string | lower)) | quote }}
+  args:
+    executable: python3
+  vars:
+    queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+    scheme: "{{ 'smb-' ~ siue_print_user if item.shared else 'smb' }}"
+    uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
+    description: "{{ item.description }}{{ ' (shared)' if item.shared else '' }}"
+  register: siue_print_current
+  changed_when: false
+  loop: "{{ siue_print_all_queues }}"
+  loop_control:
+    label: "{{ queue }}"
+
+# Re-running lpadmin -P resets the queue's driver options, so the
+# job-accounting code is set afterwards.
+- name: Create or correct the print queues
   command: >-
     lpadmin -p {{ queue }} -E
     -v {{ uri }}
     -P {{ siue_kyocera_ppd_dir }}/{{ item.ppd }}
-    -D "{{ item.description }}{{ ' (shared)' if item.shared else '' }}"
+    -D "{{ description }}"
     -L "{{ item.location }}"
     -o auth-info-required={{ 'none' if item.shared else 'negotiate' }}
     -o printer-is-shared={{ 'true' if item.shared else 'false' }}
@@ -126,7 +140,8 @@
     queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
     scheme: "{{ 'smb-' ~ siue_print_user if item.shared else 'smb' }}"
     uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
-  when: siue_print_current.results[idx].stdout is not search(uri ~ '$', multiline=True)
+    description: "{{ item.description }}{{ ' (shared)' if item.shared else '' }}"
+  when: siue_print_current.results[idx].stdout | trim != 'match'
   loop: "{{ siue_print_all_queues }}"
   loop_control:
     index_var: idx
@@ -141,6 +156,7 @@
   loop: "{{ siue_print_all_queues }}"
   loop_control:
     label: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+  no_log: yes    # the result holds the account ID
   become: yes
 
 - name: Set the job-accounting code on each queue
@@ -158,6 +174,30 @@
 - name: Share the queues to the listed clients
   include_tasks: sharing.yml
   when: siue_print_share_clients | length > 0
+
+- name: Stop sharing when no clients are listed
+  include_tasks: unsharing.yml
+  when: siue_print_share_clients | length == 0
+
+# Clients dropped from the list keep no way in through the firewall.
+- name: Read the firewall's IPP rules
+  command: firewall-cmd --permanent --list-rich-rules
+  register: siue_print_fw_rules
+  changed_when: false
+  become: yes
+
+- name: Remove firewall rules for clients no longer listed
+  ansible.posix.firewalld:
+    rich_rule: "{{ item }}"
+    permanent: yes
+    immediate: yes
+    state: disabled
+  loop: >-
+    {{ siue_print_fw_rules.stdout_lines
+       | select('match', '^rule family="ipv4" source address="[0-9.]+/32" port port="631" protocol="tcp" accept$')
+       | reject('regex', 'address="(' ~ (siue_print_share_clients | map('regex_escape') | join('|') or '^$') ~ ')/32"')
+       | list }}
+  become: yes
 
 - name: Remind the user to save their Kerberos keys
   debug:

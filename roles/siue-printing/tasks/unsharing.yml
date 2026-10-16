@@ -1,0 +1,48 @@
+---
+# Undo sharing.yml when siue_print_share_clients is empty, so no PC that was
+# listed before can still print as siue_print_user. Printer advertising and
+# IdleExitTimeout are left as sharing.yml set them; neither opens anything.
+
+- name: Look for shared queues
+  command: lpstat -v {{ item.name }}-win
+  register: siue_print_shared_existing
+  changed_when: false
+  failed_when: false
+  loop: "{{ siue_print_queues }}"
+  loop_control:
+    label: "{{ item.name }}-win"
+
+- name: Remove the shared queues
+  command: lpadmin -x {{ item.item.name }}-win
+  when: item.rc == 0
+  loop: "{{ siue_print_shared_existing.results }}"
+  loop_control:
+    label: "{{ item.item.name }}-win"
+  become: yes
+
+- name: Remove the fixed-user smb backend
+  file:
+    path: "/usr/lib/cups/backend/smb-{{ siue_print_user }}"
+    state: absent
+  become: yes
+
+- name: Remove the shared queues' access rules
+  blockinfile:
+    path: /etc/cups/cupsd.conf
+    marker: "# {mark} siue-printing shared queues (ansible managed)"
+    state: absent
+  become: yes
+  notify: Restart cups
+
+- name: Listen for IPP on this machine only
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^(Listen localhost:631|Port 631)$'
+    line: Listen localhost:631
+  become: yes
+  notify: Restart cups
+
+- name: Check the edited CUPS configuration
+  command: cupsd -t
+  changed_when: false
+  become: yes

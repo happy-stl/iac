@@ -47,7 +47,10 @@ siue-keytab
 ```
 
 The playbook asks for everything personal, so nothing about you is kept in
-the repository. Press Enter to accept a default:
+the repository, and the account ID is kept out of `ansible.log`. On the
+machine itself, the account ID is stored in each queue's driver settings
+(`/etc/cups/ppd/<queue>.ppd`, readable by root and the `lp` group) because
+CUPS writes it into every job from there. Press Enter to accept a default:
 
 | Prompt | Default | Used for |
 | ------ | ------- | -------- |
@@ -97,7 +100,10 @@ authentication". Check the timer with
 Each PC you list may print to an `<queue>-win` twin of every queue, and those
 jobs reach the print server under *your* campus login and account ID. Only
 list your own machines. Only those addresses can reach the queues, through
-both CUPS and the firewall, and the queues are not advertised.
+both CUPS and the firewall, and the queues are not advertised. Rerunning the
+playbook with a shorter list removes the dropped PCs' firewall rules; with an
+empty list it also removes the shared queues and stops CUPS listening on the
+network.
 
 On the Windows PC: Settings → Bluetooth & devices → Printers & scanners →
 Add device → **Add manually** → **Select a shared printer by name**, and enter
