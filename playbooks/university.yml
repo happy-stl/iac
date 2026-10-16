@@ -1,0 +1,23 @@
+---
+# SIUE machine setup: campus Kerberos and the Engineering copiers.
+#
+#   ansible-playbook -K playbooks/university.yml
+#
+# Prompts for your Kyocera account ID (kept out of the repository) and for
+# any Windows PCs that should print through this machine.
+- name: University (SIUE) Setup (Linux Development)
+  hosts: linux_dev
+  connection: local
+  become: no
+  vars_prompt:
+    - name: siue_print_account_id
+      prompt: "Kyocera job-accounting (copier account) ID"
+      private: yes
+    - name: siue_print_share_clients_csv
+      prompt: "IPv4 addresses of Windows PCs to share the copiers with (comma-separated, blank for none)"
+      private: no
+      default: ""
+  vars:
+    siue_print_share_clients: "{{ siue_print_share_clients_csv | split(',') | map('trim') | reject('equalto', '') | list }}"
+  roles:
+    - university

@@ -1,0 +1,4 @@
+---
+- name: University role completed
+  debug:
+    msg: "SIUE Kerberos and printing are configured."

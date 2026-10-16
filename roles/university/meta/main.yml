@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: William Grim
+  description: Everything a Linux machine at SIUE needs - campus Kerberos and copier printing
+  license: MIT
+  min_ansible_version: "2.11"
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+  galaxy_tags:
+    - siue
+    - university
+
+dependencies:
+  - role: siue-kerberos
+  - role: siue-printing

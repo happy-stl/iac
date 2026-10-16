@@ -1,0 +1,67 @@
+---
+# Serve the -win queues over IPP to siue_print_share_clients and nobody else.
+# Campus addresses are public, so neither CUPS's usual "@LOCAL" rule nor
+# DNS-SD advertising is used: clients add the queues by URL.
+
+- name: Listen for IPP on the network
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^(Listen localhost:631|Port 631)$'
+    line: Port 631
+  become: yes
+  notify: Restart cups
+
+- name: Turn off printer advertising
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^{{ item.key }} '
+    line: "{{ item.key }} {{ item.value }}"
+  loop:
+    - { key: Browsing, value: "No" }
+    - { key: BrowseLocalProtocols, value: none }
+  become: yes
+  notify: Restart cups
+
+# Fedora's cupsd is socket-activated on the local socket only and exits when
+# idle, which would leave nothing listening on port 631.
+- name: Keep cupsd running
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^IdleExitTimeout '
+    line: IdleExitTimeout 0
+  become: yes
+  notify: Restart cups
+
+- name: Allow only the listed clients to reach the shared queues
+  blockinfile:
+    path: /etc/cups/cupsd.conf
+    marker: "# {mark} siue-printing shared queues (ansible managed)"
+    insertbefore: '^<Location />'
+    block: |
+      ServerAlias {{ ansible_hostname }} {{ ansible_fqdn }} {{ ansible_default_ipv4.address }}
+      {% for q in siue_print_queues %}
+      <Location /printers/{{ q.name }}-win>
+        Order deny,allow
+        Deny from all
+        Allow from 127.0.0.1
+      {% for client in siue_print_share_clients %}
+        Allow from {{ client }}
+      {% endfor %}
+      </Location>
+      {% endfor %}
+  become: yes
+  notify: Restart cups
+
+- name: Check the edited CUPS configuration
+  command: cupsd -t
+  changed_when: false
+  become: yes
+
+- name: Open IPP in the firewall for the listed clients
+  ansible.posix.firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ item }}/32" port port="631" protocol="tcp" accept'
+    permanent: yes
+    immediate: yes
+    state: enabled
+  loop: "{{ siue_print_share_clients }}"
+  become: yes
