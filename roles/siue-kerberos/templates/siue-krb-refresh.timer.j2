@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Refresh the SIUE Kerberos ticket hourly
+
+[Timer]
+OnStartupSec=1min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target

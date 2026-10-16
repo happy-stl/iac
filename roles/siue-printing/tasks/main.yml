@@ -159,10 +159,11 @@
   include_tasks: sharing.yml
   when: siue_print_share_clients | length > 0
 
-- name: Remind the user to get a Kerberos ticket
+- name: Remind the user to save their Kerberos keys
   debug:
     msg: >-
-      Printing authenticates with your Kerberos ticket. Run
-      'kinit {{ siue_print_user }}@{{ siue_krb5_realm }}' after each login
-      (tickets last about 10 hours, renewable for 7 days); jobs submitted
-      without one wait in the queue as "held for authentication".
+      Printing authenticates with your Kerberos ticket. Run 'siue-keytab'
+      once (and again after every campus password change) so the hourly
+      siue-krb-refresh timer can keep a ticket for you. Without it, run
+      'kinit {{ siue_krb5_user }}@{{ siue_krb5_realm }}' at least weekly;
+      jobs sent without a ticket wait as "held for authentication".

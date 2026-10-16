@@ -43,38 +43,73 @@ Fedora only: the Kyocera driver is an RPM.
 
 ```bash
 ansible-playbook -K playbooks/university.yml
-kinit <your-username>@CAMPUS.SIUE.EDU
+siue-keytab
 ```
 
-The playbook prompts for two things and stores neither:
+The playbook asks for everything personal, so nothing about you is kept in
+the repository. Press Enter to accept a default:
 
-- **Kyocera account ID**: your copier job-accounting code. It is written into
-  every job, so each person runs the playbook with their own.
-- **Windows PCs to share with**: IPv4 addresses, comma-separated, or blank.
-  Each listed PC may print to an `<queue>-win` twin of every queue, and those
-  jobs reach the print server under *your* campus login. Only list your own
-  machines.
+| Prompt | Default | Used for |
+| ------ | ------- | -------- |
+| CAMPUS username | your Linux login name | Kerberos login to the print server |
+| Kyocera copier account ID | none: required | Written into every job as the copier's job-accounting code |
+| Windows PCs to share with | none | IPv4 addresses, comma-separated, that may print through this machine |
+
+To skip the prompts, pass the answers on the command line:
+
+```bash
+ansible-playbook -K playbooks/university.yml \
+  -e siue_campus_user_input=<campus-username> \
+  -e siue_print_account_id=<account-id> \
+  -e siue_print_share_clients_csv=<windows-pc-ip>
+```
 
 It creates `ENG2ndFloorKyocera` (TASKalfa 6003i) and `ENG3rdFloorKyocera`
 (TASKalfa 7003i); add copiers in `siue_print_queues`
 (`roles/siue-printing/defaults/main.yml`).
 
-Printing uses your Kerberos ticket rather than a stored password. It lasts
-about 10 hours and renews for up to 7 days, so run `kinit` after logging in.
+### Kerberos tickets
+
+Printing uses your Kerberos ticket rather than a stored password. A ticket
+lasts about 10 hours; the role installs a user timer, `siue-krb-refresh`,
+that runs hourly, even when you are not logged in, and keeps one current:
+
+- With a keytab, it gets a new ticket every hour, indefinitely. Run
+  `siue-keytab` once to make the keytab: it asks for your campus password,
+  checks it against the domain controller, and saves the derived keys in
+  `/var/kerberos/krb5/user/<uid>/client.keytab` (readable only by you).
+- Without one, it renews the current ticket, which works for up to 7 days
+  after your last `kinit <campus-username>@CAMPUS.SIUE.EDU`.
+
+**After every campus password change, run `siue-keytab` again.** The old
+keytab stops working immediately; the timer falls back to renewing until you
+do, which gives you up to 7 days.
+
+The keytab can log in as you just as your password can. It is safe only on
+a machine where nobody else has root.
+
 A job sent without a valid ticket waits in the queue as "held for
-authentication" until you do.
+authentication". Check the timer with
+`journalctl --user -u siue-krb-refresh`.
 
-### Adding a shared queue on Windows
+### Sharing with Windows
 
-Settings → Bluetooth & devices → Printers & scanners → Add device →
-**Add manually** → **Select a shared printer by name**, and enter
+Each PC you list may print to an `<queue>-win` twin of every queue, and those
+jobs reach the print server under *your* campus login and account ID. Only
+list your own machines. Only those addresses can reach the queues, through
+both CUPS and the firewall, and the queues are not advertised.
+
+On the Windows PC: Settings → Bluetooth & devices → Printers & scanners →
+Add device → **Add manually** → **Select a shared printer by name**, and enter
 
 ```text
 http://<linux-host>:631/printers/ENG2ndFloorKyocera-win
+http://<linux-host>:631/printers/ENG3rdFloorKyocera-win
 ```
 
-Accept the Microsoft IPP Class Driver Windows offers. The Linux machine runs
-the Kyocera driver and adds the account ID, so Windows needs neither.
+where `<linux-host>` is the Linux machine's name (`hostname -f`). Accept the
+Microsoft IPP Class Driver Windows offers. The Linux machine runs the
+Kyocera driver and adds the account ID, so Windows needs neither.
 
 ## Configuration
 

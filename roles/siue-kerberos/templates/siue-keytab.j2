@@ -1,0 +1,42 @@
+#!/bin/sh
+# {{ ansible_managed }}
+#
+# Save the Kerberos keys for your CAMPUS password in your client keytab, so
+# siue-krb-refresh can get tickets without asking. Run it again after every
+# campus password change: the old keys stop working at once.
+#
+# Usage: siue-keytab [campus-username]
+# The username defaults to the one saved in ~/.config/siue/campus-user when
+# Ansible set this machine up, then to your login name.
+set -eu
+
+user_file="$HOME/.config/siue/campus-user"
+default_user=$(cat "$user_file" 2>/dev/null || id -un)
+principal="${1:-$default_user}@{{ siue_krb5_realm }}"
+keytab="/var/kerberos/krb5/user/$(id -u)/client.keytab"
+
+tmp=$(mktemp -d)
+trap 'stty echo 2>/dev/null; rm -rf "$tmp"' EXIT INT TERM
+
+printf 'Campus password for %s: ' "$principal"
+stty -echo
+IFS= read -r password
+stty echo
+echo
+
+# -f asks the KDC for the account's salt, which AD derives from the realm and
+# the account name as AD stores it.
+printf '%s\n%s\n%s\n%s\n%s\n' \
+  "addent -password -p $principal -k 1 -e aes256-cts-hmac-sha1-96 -f" "$password" \
+  "addent -password -p $principal -k 1 -e aes128-cts-hmac-sha1-96 -f" "$password" \
+  "wkt $tmp/client.keytab" | ktutil >/dev/null
+unset password
+
+if ! KRB5CCNAME="FILE:$tmp/ccache" kinit -k -t "$tmp/client.keytab" "$principal"; then
+  echo "That keytab was refused: check the password and run siue-keytab again." >&2
+  exit 1
+fi
+
+install -m 0600 "$tmp/client.keytab" "$keytab"
+echo "Saved $keytab."
+/usr/local/bin/siue-krb-refresh && klist | head -5

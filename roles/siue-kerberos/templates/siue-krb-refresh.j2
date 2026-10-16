@@ -1,0 +1,25 @@
+#!/bin/sh
+# {{ ansible_managed }}
+#
+# Keep a Kerberos ticket for the current user. Gets a new ticket from the
+# keytab siue-keytab made; without a working keytab (none yet, or the campus
+# password changed) it renews the current ticket instead, which works for up
+# to 7 days after the last kinit with a password.
+
+campus_user=$(cat "$HOME/.config/siue/campus-user" 2>/dev/null || id -un)
+principal="$campus_user@{{ siue_krb5_realm }}"
+keytab="/var/kerberos/krb5/user/$(id -u)/client.keytab"
+
+if [ -s "$keytab" ] && kinit -k -t "$keytab" "$principal" 2>/dev/null; then
+  exit 0
+fi
+
+if kinit -R 2>/dev/null; then
+  if [ -s "$keytab" ]; then
+    echo "The keytab was refused (campus password changed?). Renewed the current ticket; run siue-keytab to fix." >&2
+  fi
+  exit 0
+fi
+
+echo "No ticket could be refreshed: run siue-keytab, or kinit $principal." >&2
+exit 1

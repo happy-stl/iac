@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Refresh the SIUE Kerberos ticket
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/siue-krb-refresh

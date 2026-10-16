@@ -2,22 +2,33 @@
 # SIUE machine setup: campus Kerberos and the Engineering copiers.
 #
 #   ansible-playbook -K playbooks/university.yml
+#   siue-keytab        # once, then after every campus password change
 #
-# Prompts for your Kyocera account ID (kept out of the repository) and for
-# any Windows PCs that should print through this machine.
+# Prompts for everything personal, so nothing about you is kept in the
+# repository. Press Enter to accept a prompt's default. To skip the prompts,
+# pass the answers instead:
+#
+#   ansible-playbook -K playbooks/university.yml \
+#     -e siue_campus_user_input=jdoe -e siue_print_account_id=12345 \
+#     -e siue_print_share_clients_csv=146.163.150.99
 - name: University (SIUE) Setup (Linux Development)
   hosts: linux_dev
   connection: local
   become: no
   vars_prompt:
+    - name: siue_campus_user_input
+      prompt: "CAMPUS username (Enter = same as your Linux login name)"
+      private: no
+      default: ""
     - name: siue_print_account_id
-      prompt: "Kyocera job-accounting (copier account) ID"
+      prompt: "Kyocera copier account ID (1-8 digits; input hidden)"
       private: yes
     - name: siue_print_share_clients_csv
-      prompt: "IPv4 addresses of Windows PCs to share the copiers with (comma-separated, blank for none)"
+      prompt: "IPv4 addresses of your Windows PCs to share the copiers with (comma-separated; Enter = none)"
       private: no
       default: ""
   vars:
+    siue_krb5_user: "{{ siue_campus_user_input | trim or ansible_user_id }}"
     siue_print_share_clients: "{{ siue_print_share_clients_csv | split(',') | map('trim') | reject('equalto', '') | list }}"
   roles:
     - university
