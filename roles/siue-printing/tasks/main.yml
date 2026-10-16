@@ -13,56 +13,74 @@
     fail_msg: "siue-printing installs Kyocera's RPM driver and supports Fedora-family systems only"
     quiet: yes
 
-# samba-krb5-printing provides smbspool_krb5_wrapper, which runs the smb
-# backend as the job's owner with their Kerberos ticket. Kyocera's pre-filter
-# imports pypdf, which its RPM does not declare.
-- name: Install CUPS, Samba printing and the driver's Python dependency
+# Jobs go to the print server through the Print Spooler RPC interface
+# (backend files/spoolss-backend.py, on Samba's Python bindings): the server
+# refuses jobs written to the printer share over SMB, which is how Samba's
+# own smbspool backend prints. Kyocera's pre-filter imports pypdf, which its
+# RPM does not declare.
+- name: Install CUPS, Samba's Python bindings and the driver's Python dependency
   package:
     name:
       - cups
+      - python3-samba
       - samba-client
-      - samba-krb5-printing
       - python3-pypdf
     state: present
   become: yes
 
-- name: Use the Kerberos wrapper as CUPS's smb backend
-  community.general.alternatives:
-    name: cups_backend_smb
-    path: /usr/libexec/samba/smbspool_krb5_wrapper
+- name: Install the Print Spooler RPC backend
+  copy:
+    src: spoolss-backend.py
+    dest: /usr/lib/cups/backend/spoolss
+    owner: root
+    group: root
+    mode: '0700'
   become: yes
 
-- name: Create the driver download cache
-  file:
-    path: "{{ siue_kyocera_cache_dir }}"
-    state: directory
-    mode: '0755'
-  become: yes
+# The bundle is ~270 MB and only one RPM in it is used, so it is fetched only
+# when that exact driver version is missing, and deleted once installed.
+- name: Check for the Kyocera driver
+  command: rpm -q {{ siue_kyocera_rpm | basename | regex_replace('[.][^.]+[.]rpm$', '') }}
+  register: siue_kyocera_installed
+  changed_when: false
+  failed_when: false
 
-- name: Download Kyocera's Linux driver bundle
-  get_url:
-    url: "{{ siue_kyocera_archive_url }}"
-    dest: "{{ siue_kyocera_cache_dir }}/KyoceraLinuxPackages.tar.gz"
-    checksum: "sha256:{{ siue_kyocera_archive_sha256 }}"
-    mode: '0644'
+- name: Install the Kyocera driver from Kyocera's Linux bundle
+  when: siue_kyocera_installed.rc != 0
   become: yes
+  block:
+    - name: Create the driver download cache
+      file:
+        path: "{{ siue_kyocera_cache_dir }}"
+        state: directory
+        mode: '0755'
 
-- name: Extract the Fedora driver RPM
-  unarchive:
-    src: "{{ siue_kyocera_cache_dir }}/KyoceraLinuxPackages.tar.gz"
-    dest: "{{ siue_kyocera_cache_dir }}"
-    remote_src: yes
-    include:
-      - "{{ siue_kyocera_rpm }}"
-    creates: "{{ siue_kyocera_cache_dir }}/{{ siue_kyocera_rpm }}"
-  become: yes
+    - name: Download Kyocera's Linux driver bundle
+      get_url:
+        url: "{{ siue_kyocera_archive_url }}"
+        dest: "{{ siue_kyocera_cache_dir }}/KyoceraLinuxPackages.tar.gz"
+        checksum: "sha256:{{ siue_kyocera_archive_sha256 }}"
+        mode: '0644'
 
-- name: Install the Kyocera driver
-  dnf:
-    name: "{{ siue_kyocera_cache_dir }}/{{ siue_kyocera_rpm }}"
-    state: present
-    disable_gpg_check: yes
-  become: yes
+    - name: Extract the Fedora driver RPM
+      unarchive:
+        src: "{{ siue_kyocera_cache_dir }}/KyoceraLinuxPackages.tar.gz"
+        dest: "{{ siue_kyocera_cache_dir }}"
+        remote_src: yes
+        include:
+          - "{{ siue_kyocera_rpm }}"
+
+    - name: Install the Kyocera driver
+      dnf:
+        name: "{{ siue_kyocera_cache_dir }}/{{ siue_kyocera_rpm }}"
+        state: present
+        disable_gpg_check: yes
+
+  always:
+    - name: Remove the driver download
+      file:
+        path: "{{ siue_kyocera_cache_dir }}"
+        state: absent
 
 # The RPM's install script leaves its data directory world-writable.
 - name: Restore sane permissions on the driver directory
@@ -91,10 +109,10 @@
          + (siue_print_queues | map('combine', {'shared': true}) | list
             if siue_print_share_clients | length > 0 else []) }}
 
-- name: Install the fixed-user smb backend for shared queues
+- name: Install the fixed-user backend for shared queues
   template:
-    src: smb-user-backend.j2
-    dest: "/usr/lib/cups/backend/smb-{{ siue_print_user }}"
+    src: spoolss-user-backend.j2
+    dest: "/usr/lib/cups/backend/spoolss-{{ siue_print_user }}"
     owner: root
     group: root
     mode: '0700'
@@ -103,7 +121,13 @@
 
 # Local queues authenticate as whoever submitted the job (negotiate). Shared
 # twins take no authentication from the client and always use
-# siue_print_user's ticket through the smb-<user> backend.
+# siue_print_user's ticket through the spoolss-<user> backend.
+- name: Remove the smb backend earlier versions of this role installed
+  file:
+    path: "/usr/lib/cups/backend/smb-{{ siue_print_user }}"
+    state: absent
+  become: yes
+
 - name: Compare each queue with its wanted settings
   script: >-
     queue-matches.py {{ queue | quote }} {{ (siue_kyocera_ppd_dir ~ '/' ~ item.ppd) | quote }}
@@ -114,11 +138,12 @@
     {{ ('printer-is-shared=' ~ (item.shared | string | lower)) | quote }}
   args:
     executable: python3
+  become: yes    # printers.conf is root-only
   vars:
     queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
-    scheme: "{{ 'smb-' ~ siue_print_user if item.shared else 'smb' }}"
+    scheme: "{{ 'spoolss-' ~ siue_print_user if item.shared else 'spoolss' }}"
     uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
-    description: "{{ item.description }}{{ ' (shared)' if item.shared else '' }}"
+    description: "{{ (item.short_name ~ ' (' ~ siue_print_user ~ \"'s private share)\") if item.shared else item.description }}"
   register: siue_print_current
   changed_when: false
   loop: "{{ siue_print_all_queues }}"
@@ -138,9 +163,9 @@
     -o printer-is-shared={{ 'true' if item.shared else 'false' }}
   vars:
     queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
-    scheme: "{{ 'smb-' ~ siue_print_user if item.shared else 'smb' }}"
+    scheme: "{{ 'spoolss-' ~ siue_print_user if item.shared else 'spoolss' }}"
     uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
-    description: "{{ item.description }}{{ ' (shared)' if item.shared else '' }}"
+    description: "{{ (item.short_name ~ ' (' ~ siue_print_user ~ \"'s private share)\") if item.shared else item.description }}"
   when: siue_print_current.results[idx].stdout | trim != 'match'
   loop: "{{ siue_print_all_queues }}"
   loop_control:

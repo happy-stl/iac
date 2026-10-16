@@ -1,0 +1,20 @@
+# >>> stencil >>>
+siue-printing/.stencil-manifest.json
+siue-printing/.stencil/Dockerfile.browser
+siue-printing/.stencil/browser-package-lock.json
+siue-printing/.stencil/code-bundle-filter.lua
+siue-printing/.stencil/compose-once.ps1
+siue-printing/.stencil/docker-compose.yml
+siue-printing/.stencil/documents.mk
+siue-printing/.stencil/embed-images.lua
+siue-printing/.stencil/figure-name-filter.lua
+siue-printing/.stencil/format-package-lock.json
+siue-printing/.stencil/frontmatter-filter.lua
+siue-printing/.stencil/hidden-filter.lua
+siue-printing/.stencil/html-template.html
+siue-printing/.stencil/html-to-pdf.js
+siue-printing/.stencil/mermaid-figure-filter.lua
+siue-printing/Makefile
+siue-printing/siue-printing*.html
+siue-printing/siue-printing*.pdf
+# <<< stencil <<<
