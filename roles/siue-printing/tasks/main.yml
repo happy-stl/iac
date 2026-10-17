@@ -204,24 +204,28 @@
   include_tasks: unsharing.yml
   when: siue_print_share_clients | length == 0
 
-# Clients dropped from the list keep no way in through the firewall.
-- name: Read the firewall's IPP rules
-  command: firewall-cmd --permanent --list-rich-rules
-  register: siue_print_fw_rules
+# Clients dropped from the list keep no way in through the firewall. Only rules
+# this role made are removed: the clients it last opened for are recorded.
+- name: Read the clients the firewall was last opened for
+  command: cat {{ siue_print_share_clients_file }}
+  register: siue_print_previous_clients
   changed_when: false
-  become: yes
+  failed_when: false
 
 - name: Remove firewall rules for clients no longer listed
   ansible.posix.firewalld:
-    rich_rule: "{{ item }}"
+    rich_rule: 'rule family="ipv4" source address="{{ item }}/32" port port="631" protocol="tcp" accept'
     permanent: yes
     immediate: yes
     state: disabled
-  loop: >-
-    {{ siue_print_fw_rules.stdout_lines
-       | select('match', '^rule family="ipv4" source address="[0-9.]+/32" port port="631" protocol="tcp" accept$')
-       | reject('regex', 'address="(' ~ (siue_print_share_clients | map('regex_escape') | join('|') or '^$') ~ ')/32"')
-       | list }}
+  loop: "{{ siue_print_previous_clients.stdout_lines | difference(siue_print_share_clients) }}"
+  become: yes
+
+- name: Record the clients the firewall is open for
+  copy:
+    dest: "{{ siue_print_share_clients_file }}"
+    content: "{{ siue_print_share_clients | map('regex_replace', '$', '\\n') | join }}"
+    mode: '0644'
   become: yes
 
 - name: Remind the user to save their Kerberos keys

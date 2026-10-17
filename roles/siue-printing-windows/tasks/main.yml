@@ -51,7 +51,8 @@
     $name = '{{ item.name }}'
     $url  = 'https://{{ siue_print_server_host }}:631/printers/{{ item.queue }}'
     $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
-    if ($existing -and $existing.PortName -eq $url) { 'present'; exit }
+    if ($existing -and $existing.PortName -eq $url -and
+        $existing.DriverName -eq '{{ siue_print_windows_driver }}') { 'present'; exit }
     if ($existing) { Remove-Printer -Name $name }
     $p = Start-Process rundll32.exe -Wait -PassThru -ArgumentList @(
       'printui.dll,PrintUIEntry', '/if', '/q',

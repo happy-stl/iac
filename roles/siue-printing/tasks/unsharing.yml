@@ -61,6 +61,14 @@
   become: yes
   notify: Restart cups
 
+- name: Remove any other network listeners
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^Listen (?!localhost:631$|/)'
+    state: absent
+  become: yes
+  notify: Restart cups
+
 - name: Stop advertising printers
   lineinfile:
     path: /etc/cups/cupsd.conf

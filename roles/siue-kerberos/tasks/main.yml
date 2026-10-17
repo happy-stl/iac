@@ -78,3 +78,6 @@
     enabled: yes
     state: started
     daemon_reload: yes
+  # A non-login run (cron, ssh without a session) may not set it.
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"

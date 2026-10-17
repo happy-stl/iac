@@ -150,6 +150,7 @@ sudo tee /etc/krb5.conf.d/campus-siue.conf >/dev/null <<'EOF'
     default_realm = CAMPUS.SIUE.EDU
     dns_lookup_kdc = true
     dns_lookup_realm = true
+    renew_lifetime = 7d
 
 [domain_realm]
     .campus.siue.edu = CAMPUS.SIUE.EDU
@@ -532,6 +533,7 @@ rpcclient --use-kerberos=required kyocera.campus.siue.edu \
 | `/etc/cups/cupsd.conf`                                 | Network listener, advertising, never idles out, HTTPS-only access for the PC to the shared queues and web pages |
 | `avahi`, `openssl`; `avahi-daemon` enabled             | Advertising, and making the certificate                                                                         |
 | firewalld rich rule                                    | TCP 631 from the Windows PC only                                                                                |
+| `/etc/cups/siue-print-share-clients`                   | (Ansible only) The PCs the firewall was opened for, so a later run removes only its own rules                   |
 | **Windows PC (Ansible play)**                          |                                                                                                                 |
 | The Linux machine's certificate in `LocalMachine\Root` | Lets Windows trust the HTTPS printers                                                                           |
 | `Microsoft PS Class Driver`                            | Driver for both printers                                                                                        |

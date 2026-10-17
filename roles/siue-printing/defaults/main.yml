@@ -49,3 +49,6 @@ siue_kyocera_archive_sha256: 14235a8e4dbe9f2fdff481252e2cc64431f59a7dcf2497ef548
 siue_kyocera_rpm: Fedora/Global/kyodialog_x86_64/kyodialog-10.1-0.x86_64.rpm
 siue_kyocera_ppd_dir: /usr/share/kyocera10.1/ppd10.1
 siue_kyocera_cache_dir: /var/cache/siue-printing
+
+# Which clients this role opened the firewall for, so it removes only its own rules.
+siue_print_share_clients_file: /etc/cups/siue-print-share-clients
