@@ -206,6 +206,20 @@
   become: yes
   notify: Restart cups
 
+# Nothing is advertised over DNS-SD, shared or not: Windows' "Add device"
+# route picks its own IPP driver after a minute's Windows Update search, so
+# PCs are connected by playbooks/windows.yml instead, with the PS driver.
+- name: Keep CUPS from advertising the queues
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^{{ item.key }} '
+    line: "{{ item.key }} {{ item.value }}"
+  loop:
+    - { key: Browsing, value: "No" }
+    - { key: BrowseLocalProtocols, value: none }
+  become: yes
+  notify: Restart cups
+
 - name: Share the queues to the listed clients
   include_tasks: sharing.yml
   when: siue_print_share_clients | length > 0

@@ -317,9 +317,9 @@ siue-keytab
 This part is optional. Every job from the Windows PC reaches the print server under _your_ campus
 login and your account ID, so share only with your own machines.
 
-The shared queues are served over HTTPS only, and only to the PC's address. They are also advertised
-on the network so Windows can list them; that announcement reaches every machine on the subnet,
-which is why their names say whose share they are.
+The shared queues are served over HTTPS only, and only to the PC's address. They are not advertised
+on the network, so they do not appear in Windows' **Add device** list: connect the PC with Ansible
+or by the queue's address, both below.
 
 ## 1. Add a backend that always prints as you
 
@@ -371,7 +371,7 @@ Without one, CUPS makes a throwaway certificate that can change on restart, whic
 trust you give it on Windows.
 
 ```bash
-sudo dnf install -y openssl avahi
+sudo dnf install -y openssl
 H=$(hostname -f); IP=$(hostname -I | awk '{print $1}')
 sudo openssl req -x509 -newkey rsa:3072 -nodes -days 3650 \
   -keyout /etc/cups/ssl/$H.key -out /etc/cups/ssl/$H.crt -subj "/CN=$H" \
@@ -391,8 +391,8 @@ plain HTTP on the shared queues.
 ```bash
 sudo sed -i \
   -e 's/^Listen localhost:631$/Port 631/' \
-  -e 's/^Browsing .*/Browsing Yes/' \
-  -e 's/^BrowseLocalProtocols .*/BrowseLocalProtocols dnssd/' \
+  -e 's/^Browsing .*/Browsing No/' \
+  -e 's/^BrowseLocalProtocols .*/BrowseLocalProtocols none/' \
   -e 's/^IdleExitTimeout .*/IdleExitTimeout 0/' \
   /etc/cups/cupsd.conf
 
@@ -410,7 +410,7 @@ rm "$BLOCK"
 sudo sed -i "/^<Location \/>\$/,/^<\/Location>\$/c\\<Location />\n  Order allow,deny\n  Allow from $WINPC\n  Encryption Required\n</Location>" \
   /etc/cups/cupsd.conf
 
-sudo systemctl enable --now avahi-daemon cups
+sudo systemctl enable --now cups
 sudo cupsd -t && sudo systemctl restart cups
 ```
 
@@ -486,8 +486,9 @@ the import did not take: it needs an Administrator PowerShell.
    sends PostScript, and the Linux machine renders it with the Kyocera driver and adds your account
    ID.
 
-> **Use the address, not the discovery list.** The queues appear under Add device as "ENG 2nd Floor
-> Copier (_user_'s private share)", but adding from that list stalls at "Connecting".
+> **Why not the discovery list?** The queues are deliberately not advertised. Windows can only add a
+> discovered printer with its own IPP Class Driver, after about a minute searching Windows Update
+> for a Kyocera driver, so the address and the PS Class Driver are the dependable route.
 
 ## 3. Print a test page
 
@@ -525,30 +526,30 @@ rpcclient --use-kerberos=required kyocera.campus.siue.edu \
 
 # What this installs and changes
 
-| Item                                                   | Purpose                                                                                                         |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `cups`, `samba-client`, `krb5-workstation`             | Print system, SMB tools, and `kinit`/`klist`                                                                    |
-| `python3-samba`                                        | Print Spooler client for the `spoolss` backend                                                                  |
-| `python3-pypdf`                                        | Undeclared dependency of Kyocera's pre-filter                                                                   |
-| `kyodialog-10.1`                                       | Kyocera driver, PPDs and filters; also a status daemon (`knmd`) at login                                        |
-| `/etc/krb5.conf.d/campus-siue.conf`                    | Campus realm settings                                                                                           |
-| `/usr/lib/cups/backend/spoolss`                        | Submits jobs through the Print Spooler interface                                                                |
-| `ENG2ndFloorKyocera`, `ENG3rdFloorKyocera`             | Local queues, printing as whoever submits the job                                                               |
-| `cups.service` enabled                                 | CUPS runs from boot                                                                                             |
-| `/usr/local/bin/siue-keytab`, `siue-krb-refresh`       | Make the keytab; refresh the ticket                                                                             |
-| `siue-krb-refresh.timer` (user unit), lingering on     | Hourly ticket refresh, with or without a login                                                                  |
-| `~/.config/siue/campus-user`                           | Your CAMPUS username, for the two commands                                                                      |
-| `/var/kerberos/krb5/user/<uid>/client.keytab`          | Your keytab, mode 0600                                                                                          |
-| **Windows sharing only**                               |                                                                                                                 |
-| `/usr/lib/cups/backend/spoolss-<user>`                 | Prints with your ticket for network jobs                                                                        |
-| `ENG2ndFloorKyocera-win`, `ENG3rdFloorKyocera-win`     | Shared queues                                                                                                   |
-| `/etc/cups/ssl/<host>.crt`, `.key`                     | Long-lived certificate for HTTPS                                                                                |
-| `/etc/cups/siue-print-server.crt`                      | (Ansible only) A readable copy of the certificate, which `playbooks/windows.yml` gives the PCs                  |
-| `/etc/cups/cupsd.conf`                                 | Network listener, advertising, never idles out, HTTPS-only access for the PC to the shared queues and web pages |
-| `avahi`, `openssl`; `avahi-daemon` enabled             | Advertising, and making the certificate                                                                         |
-| firewalld rich rule                                    | TCP 631 from the Windows PC only                                                                                |
-| `/etc/cups/siue-print-share-clients`                   | (Ansible only) The PCs the firewall was opened for, so a later run removes only its own rules                   |
-| **Windows PC (Ansible play)**                          |                                                                                                                 |
-| The Linux machine's certificate in `LocalMachine\Root` | Lets Windows trust the HTTPS printers                                                                           |
-| `Microsoft PS Class Driver`                            | Driver for both printers                                                                                        |
-| `ENG 2nd Floor Copier`, `ENG 3rd Floor Copier`         | Printers on Internet ports, `https://<linux-host>:631/printers/…-win`                                           |
+| Item                                                   | Purpose                                                                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `cups`, `samba-client`, `krb5-workstation`             | Print system, SMB tools, and `kinit`/`klist`                                                                       |
+| `python3-samba`                                        | Print Spooler client for the `spoolss` backend                                                                     |
+| `python3-pypdf`                                        | Undeclared dependency of Kyocera's pre-filter                                                                      |
+| `kyodialog-10.1`                                       | Kyocera driver, PPDs and filters; also a status daemon (`knmd`) at login                                           |
+| `/etc/krb5.conf.d/campus-siue.conf`                    | Campus realm settings                                                                                              |
+| `/usr/lib/cups/backend/spoolss`                        | Submits jobs through the Print Spooler interface                                                                   |
+| `ENG2ndFloorKyocera`, `ENG3rdFloorKyocera`             | Local queues, printing as whoever submits the job                                                                  |
+| `cups.service` enabled                                 | CUPS runs from boot                                                                                                |
+| `/usr/local/bin/siue-keytab`, `siue-krb-refresh`       | Make the keytab; refresh the ticket                                                                                |
+| `siue-krb-refresh.timer` (user unit), lingering on     | Hourly ticket refresh, with or without a login                                                                     |
+| `~/.config/siue/campus-user`                           | Your CAMPUS username, for the two commands                                                                         |
+| `/var/kerberos/krb5/user/<uid>/client.keytab`          | Your keytab, mode 0600                                                                                             |
+| **Windows sharing only**                               |                                                                                                                    |
+| `/usr/lib/cups/backend/spoolss-<user>`                 | Prints with your ticket for network jobs                                                                           |
+| `ENG2ndFloorKyocera-win`, `ENG3rdFloorKyocera-win`     | Shared queues                                                                                                      |
+| `/etc/cups/ssl/<host>.crt`, `.key`                     | Long-lived certificate for HTTPS                                                                                   |
+| `/etc/cups/siue-print-server.crt`                      | (Ansible only) A readable copy of the certificate, which `playbooks/windows.yml` gives the PCs                     |
+| `/etc/cups/cupsd.conf`                                 | Network listener, no advertising, never idles out, HTTPS-only access for the PC to the shared queues and web pages |
+| `openssl`                                              | Making the certificate                                                                                             |
+| firewalld rich rule                                    | TCP 631 from the Windows PC only                                                                                   |
+| `/etc/cups/siue-print-share-clients`                   | (Ansible only) The PCs the firewall was opened for, so a later run removes only its own rules                      |
+| **Windows PC (Ansible play)**                          |                                                                                                                    |
+| The Linux machine's certificate in `LocalMachine\Root` | Lets Windows trust the HTTPS printers                                                                              |
+| `Microsoft PS Class Driver`                            | Driver for both printers                                                                                           |
+| `ENG 2nd Floor Copier`, `ENG 3rd Floor Copier`         | Printers on Internet ports, `https://<linux-host>:631/printers/…-win`                                              |
