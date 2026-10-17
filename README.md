@@ -35,8 +35,9 @@ This repository contains the following Ansible roles:
 | **nvim-config** | Sets up Neovim with auto-updating buffer configuration for better development experience | common |
 | **university** | SIUE setup. Linux: campus Kerberos and the Engineering copiers. Windows: connects the PC to the copiers a Linux machine shares | siue-kerberos, siue-printing, siue-printing-windows |
 | **siue-kerberos** | Kerberos client for the `CAMPUS.SIUE.EDU` Active Directory realm, with an hourly ticket refresh | None |
-| **siue-printing** | CUPS queues for the Engineering Kyocera copiers through the campus print server, with Kerberos and job accounting; optionally shared to Windows PCs over HTTPS | siue-kerberos |
-| **siue-printing-windows** | Trusts the Linux print server's certificate on a Windows PC and adds the shared copiers as HTTPS printers | None |
+| **siue-printing** | CUPS queues for the Engineering Kyocera copiers through the campus print server, with Kerberos and job accounting; optionally shared to Windows PCs over HTTPS | siue-common, siue-kerberos |
+| **siue-common** | Settings both copier roles share: the queues, the shared-queue suffix, the certificate path | None |
+| **siue-printing-windows** | Trusts the Linux print server's certificate on a Windows PC and adds the shared copiers as HTTPS printers | siue-common |
 
 ## University (SIUE) setup
 
@@ -56,6 +57,8 @@ timer can keep a Kerberos ticket for printing.
 
 The Windows side is run **from the Linux print server**, not from Windows,
 after the Linux run above has shared the copiers with the PC's address.
+`playbooks/windows.yml` sets the PC up: Shift+Enter as a new line in Windows
+Terminal, the Linux machine's certificate, and both copiers.
 
 1. On the PC, once: enable WinRM over HTTPS. The PowerShell is in the guide's
    [Connecting a Windows PC with Ansible](docs/siue-printing/siue-printing.md#connecting-a-windows-pc-with-ansible)
@@ -69,10 +72,9 @@ after the Linux run above has shared the copiers with the PC's address.
    cp inventories/siue-windows.example.yml ~/.config/siue/windows.yml
    ${EDITOR:-nano} ~/.config/siue/windows.yml   # fill in <pc-name> and <campus-username>
    ```
-3. Run it:
+3. Run it, now and for every new PC added to the file:
    ```bash
-   ansible-playbook -i inventories/local.yml -i ~/.config/siue/windows.yml \
-     playbooks/university.yml --limit windows_dev
+   ansible-playbook -i ~/.config/siue/windows.yml playbooks/windows.yml
    ```
 
 The full guide, including the manual steps,

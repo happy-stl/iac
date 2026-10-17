@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: William Grim
+  description: Shared settings for the SIUE copier roles (queues, shared-queue names, certificate path)
+  license: MIT
+  min_ansible_version: "2.11"
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - siue
+
+dependencies: []

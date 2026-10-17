@@ -16,23 +16,34 @@
       siue_print_server_cert.
     quiet: yes
 
-- name: Copy the print server's certificate to the PC
-  ansible.windows.win_copy:
-    content: "{{ lookup('file', siue_print_server_cert) }}\n"
-    dest: C:\Windows\Temp\siue-print-server.crt
+- name: Check whether the PC already trusts the certificate
+  ansible.windows.win_shell: >-
+    Test-Path 'Cert:\LocalMachine\Root\{{ lookup('pipe', 'openssl x509 -in '
+    ~ siue_print_server_cert ~ ' -noout -fingerprint -sha1')
+    | regex_replace('^.*=', '') | replace(':', '') }}'
+  register: siue_print_cert_trusted
+  changed_when: false
 
-# Windows only connects to an HTTPS printer whose certificate it trusts.
-- name: Trust the print server's certificate
-  ansible.windows.win_certificate_store:
-    path: C:\Windows\Temp\siue-print-server.crt
-    store_name: Root
-    store_location: LocalMachine
-    state: present
+- name: Import the print server's certificate
+  when: siue_print_cert_trusted.stdout | trim != 'True'
+  block:
+    - name: Copy the print server's certificate to the PC
+      ansible.windows.win_copy:
+        content: "{{ lookup('file', siue_print_server_cert) }}\n"
+        dest: C:\Windows\Temp\siue-print-server.crt
 
-- name: Remove the copied certificate
-  ansible.windows.win_file:
-    path: C:\Windows\Temp\siue-print-server.crt
-    state: absent
+    # Windows only connects to an HTTPS printer whose certificate it trusts.
+    - name: Trust the print server's certificate
+      ansible.windows.win_certificate_store:
+        path: C:\Windows\Temp\siue-print-server.crt
+        store_name: Root
+        store_location: LocalMachine
+        state: present
+
+    - name: Remove the copied certificate
+      ansible.windows.win_file:
+        path: C:\Windows\Temp\siue-print-server.crt
+        state: absent
 
 - name: Install the PostScript class driver
   ansible.windows.win_shell: |
@@ -48,8 +59,8 @@
 # against CUPS, so the port and driver are given explicitly.
 - name: Add the shared copier queues
   ansible.windows.win_shell: |
-    $name = '{{ item.name }}'
-    $url  = 'https://{{ siue_print_server_host }}:631/printers/{{ item.queue }}'
+    $name = '{{ item.short_name }}'
+    $url  = 'https://{{ siue_print_server_host }}:631/printers/{{ item.name }}{{ siue_print_share_suffix }}'
     $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
     if ($existing -and $existing.PortName -eq $url -and
         $existing.DriverName -eq '{{ siue_print_windows_driver }}') { 'present'; exit }
@@ -66,6 +77,6 @@
     'added'
   register: siue_print_windows_added
   changed_when: "'added' in siue_print_windows_added.stdout"
-  loop: "{{ siue_print_windows_queues }}"
+  loop: "{{ siue_print_queues }}"
   loop_control:
-    label: "{{ item.name }}"
+    label: "{{ item.short_name }}"

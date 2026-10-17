@@ -1,0 +1,20 @@
+---
+# Everything for a Windows PC, run from the Linux machine that shares the
+# copiers with it:
+#
+#   ansible-playbook -i ~/.config/siue/windows.yml playbooks/windows.yml
+#
+# The inventory lists the PCs in windows_dev; start it from
+# inventories/siue-windows.example.yml. Each PC needs WinRM over HTTPS once
+# first ("Connecting a Windows PC" in README.md). The Linux machine must have
+# been set up with playbooks/university.yml, sharing with the PC's address.
+#
+# windows-dev: Windows Terminal settings (Shift+Enter as a new line).
+# university: trusts the Linux machine's certificate and adds the copiers.
+- name: Windows PC Setup
+  hosts: windows_dev
+  connection: winrm
+  become: no
+  roles:
+    - windows-dev
+    - university

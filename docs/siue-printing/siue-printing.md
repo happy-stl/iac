@@ -59,9 +59,10 @@ accept a default:
 
 ## Connecting a Windows PC with Ansible
 
-If you shared the queues with a Windows PC, the same playbook can connect it: it trusts the Linux
-machine's certificate on the PC and adds both copiers. Run it from the Linux print server, which
-logs in to the PC with your Kerberos ticket, over WinRM on HTTPS.
+If you shared the queues with a Windows PC, `playbooks/windows.yml` connects it: it trusts the Linux
+machine's certificate on the PC, adds both copiers, and makes Shift+Enter a new line in Windows
+Terminal. Run it from the Linux print server, which logs in to the PC with your Kerberos ticket,
+over WinRM on HTTPS.
 
 **Once, on the PC**, in PowerShell run as Administrator. Use the PC's name in the campus domain and
 your Linux machine's IP address:
@@ -120,8 +121,7 @@ still authenticates both ends, and the session is bound to the TLS channel.
 **Then, and whenever the Linux machine's certificate changes:**
 
 ```bash
-ansible-playbook -i inventories/local.yml -i ~/.config/siue/windows.yml \
-  playbooks/university.yml --limit windows_dev
+ansible-playbook -i ~/.config/siue/windows.yml playbooks/windows.yml
 ```
 
 The rest of this guide is the same setup done by hand.
@@ -543,6 +543,7 @@ rpcclient --use-kerberos=required kyocera.campus.siue.edu \
 | `/usr/lib/cups/backend/spoolss-<user>`                 | Prints with your ticket for network jobs                                                                        |
 | `ENG2ndFloorKyocera-win`, `ENG3rdFloorKyocera-win`     | Shared queues                                                                                                   |
 | `/etc/cups/ssl/<host>.crt`, `.key`                     | Long-lived certificate for HTTPS                                                                                |
+| `/etc/cups/siue-print-server.crt`                      | (Ansible only) A readable copy of the certificate, which `playbooks/windows.yml` gives the PCs                  |
 | `/etc/cups/cupsd.conf`                                 | Network listener, advertising, never idles out, HTTPS-only access for the PC to the shared queues and web pages |
 | `avahi`, `openssl`; `avahi-daemon` enabled             | Advertising, and making the certificate                                                                         |
 | firewalld rich rule                                    | TCP 631 from the Windows PC only                                                                                |

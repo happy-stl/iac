@@ -1,4 +1,4 @@
-# Windows PCs for the university play (playbooks/university.yml), reached over
+# Windows PCs for playbooks/windows.yml, reached over
 # WinRM on HTTPS with your Kerberos ticket. Personal, so keep your copy outside
 # the repository:
 #
@@ -6,8 +6,7 @@
 #   cp inventories/siue-windows.example.yml ~/.config/siue/windows.yml
 #   # replace <pc-name> and <campus-username> below, then run from the
 #   # Linux print server:
-#   ansible-playbook -i inventories/local.yml -i ~/.config/siue/windows.yml \
-#     playbooks/university.yml --limit windows_dev
+#   ansible-playbook -i ~/.config/siue/windows.yml playbooks/windows.yml
 #
 # Each PC needs WinRM over HTTPS first: see "Connecting a Windows PC with
 # Ansible" in docs/siue-printing/siue-printing.md. It is ready when
