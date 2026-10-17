@@ -21,7 +21,9 @@
     mode: '0644'
   when: ansible_system == "Linux"
 
-# kitty keeps the user's own kitty.conf; only an include line is added to it.
+# Shift+Enter sends ESC+Enter (what Option/Alt+Enter sends), so Claude Code and
+# shells see a new line even through tmux, which cannot ask kitty for its own
+# Shift+Enter code. cmd+t only means something on macOS.
 - name: Create the kitty config directory
   file:
     path: "{{ ansible_user_dir }}/.config/kitty"
@@ -29,17 +31,9 @@
     mode: '0755'
   when: ansible_system in ["Linux", "Darwin"]
 
-- name: Install the kitty key bindings
+- name: Deploy kitty configuration
   copy:
-    src: kitty-keys.conf
-    dest: "{{ ansible_user_dir }}/.config/kitty/iac-keys.conf"
-    mode: '0644'
-  when: ansible_system in ["Linux", "Darwin"]
-
-- name: Load the key bindings from kitty.conf
-  lineinfile:
-    path: "{{ ansible_user_dir }}/.config/kitty/kitty.conf"
-    line: include iac-keys.conf
-    create: yes
+    src: kitty.conf
+    dest: "{{ ansible_user_dir }}/.config/kitty/kitty.conf"
     mode: '0644'
   when: ansible_system in ["Linux", "Darwin"]
