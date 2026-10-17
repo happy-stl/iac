@@ -22,9 +22,9 @@ siue_print_server: kyocera.campus.siue.edu
 # IPv4 addresses allowed to print through this machine. When non-empty, each
 # queue gets a "<name>-win" twin shared over IPPS (IPP over TLS) to these
 # addresses only, and every job on it reaches the print server as
-# siue_print_user. The twins are advertised over DNS-SD, which reaches every
-# machine on the subnet, so their names say whose share they are. Leave
-# empty to share nothing.
+# siue_print_user, so their names say whose share they are. They are not
+# advertised; connect PCs with playbooks/windows.yml. Leave empty to share
+# nothing.
 siue_print_share_clients: []
 
 # Kyocera's Linux driver bundle. The checksum pins the exact archive.

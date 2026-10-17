@@ -67,17 +67,6 @@
   become: yes
   notify: Restart cups
 
-- name: Stop advertising printers
-  lineinfile:
-    path: /etc/cups/cupsd.conf
-    regexp: '^{{ item.key }} '
-    line: "{{ item.key }} {{ item.value }}"
-  loop:
-    - { key: Browsing, value: "No" }
-    - { key: BrowseLocalProtocols, value: none }
-  become: yes
-  notify: Restart cups
-
 - name: Check the edited CUPS configuration
   command: cupsd -t
   changed_when: false

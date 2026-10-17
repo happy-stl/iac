@@ -5,8 +5,8 @@
 
 # Queues to create. `name` is the local CUPS queue, `share` the queue on the
 # Windows server, `ppd` the Kyocera model file, `short_name` what the shared
-# twin is called on the network and on Windows PCs (DNS-SD names are cut off
-# at 63 bytes).
+# twin and its Windows printer are called (keep it short: Windows truncates
+# long printer names in its lists).
 # Find a share's model with:
 #   rpcclient --use-kerberos=required kyocera.campus.siue.edu \
 #     -c 'getprinter <share> 2' | grep drivername

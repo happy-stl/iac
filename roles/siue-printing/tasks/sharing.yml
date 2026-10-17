@@ -1,8 +1,8 @@
 ---
 # Serve the -win queues over IPPS to siue_print_share_clients and nobody else.
 # Campus addresses are public, so CUPS's usual "@LOCAL" rule is not used.
-# The queues are advertised over DNS-SD so Windows lists them; that reaches
-# the whole subnet, but only the listed clients may connect.
+# They are not advertised: PCs are connected with playbooks/windows.yml (or by
+# the queue's https:// address), so nothing is announced to the subnet.
 
 - name: Listen for IPP on the network
   lineinfile:
@@ -12,31 +12,11 @@
   become: yes
   notify: Restart cups
 
-- name: Install Avahi for DNS-SD advertising and OpenSSL for the certificate
+- name: Install OpenSSL for the certificate
   package:
-    name:
-      - avahi
-      - openssl
+    name: openssl
     state: present
   become: yes
-
-- name: Run Avahi
-  service:
-    name: avahi-daemon
-    enabled: yes
-    state: started
-  become: yes
-
-- name: Advertise the shared queues
-  lineinfile:
-    path: /etc/cups/cupsd.conf
-    regexp: '^{{ item.key }} '
-    line: "{{ item.key }} {{ item.value }}"
-  loop:
-    - { key: Browsing, value: "Yes" }
-    - { key: BrowseLocalProtocols, value: dnssd }
-  become: yes
-  notify: Restart cups
 
 # CUPS otherwise makes a throwaway certificate that can change on restart,
 # which would break the trust Windows has been given. Clients import this one.
