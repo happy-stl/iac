@@ -30,9 +30,10 @@ This repository contains the following Ansible roles:
 
 | Role | Description | Dependencies |
 | ---- | ----------- | ------------ |
-| **common** | Base role that provides essential system setup and development tools | None |
+| **common** | Base role that provides essential system setup and development tools; deploys `~/.tmux.conf` (Linux) and `~/.config/kitty/kitty.conf` (Linux, macOS), both with Shift+Enter passed through as a new line | None |
 | **mednafen-gaming** | Configures Mednafen emulator for gaming with proper audio, video, and controller settings | common |
 | **nvim-config** | Sets up Neovim with auto-updating buffer configuration for better development experience | common |
+| **windows-dev** | Windows development setup; makes Shift+Enter send a new line in Windows Terminal (for Claude Code over SSH and tmux) | None |
 | **siue** | SIUE setup. Linux: campus Kerberos and the Engineering copiers. Windows: connects the PC to the copiers a Linux machine shares | siue-kerberos, siue-printing, siue-printing-windows |
 | **siue-kerberos** | Kerberos client for the `CAMPUS.SIUE.EDU` Active Directory realm, with an hourly ticket refresh | None |
 | **siue-printing** | CUPS queues for the Engineering Kyocera copiers through the campus print server, with Kerberos and job accounting; optionally shared to Windows PCs over HTTPS | siue-common, siue-kerberos |
