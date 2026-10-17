@@ -140,7 +140,7 @@
     executable: python3
   become: yes    # printers.conf is root-only
   vars:
-    queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+    queue: "{{ item.name }}{{ siue_print_share_suffix if item.shared else '' }}"
     scheme: "{{ 'spoolss-' ~ siue_print_user if item.shared else 'spoolss' }}"
     uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
     description: "{{ (item.short_name ~ ' (' ~ siue_print_user ~ \"'s private share)\") if item.shared else item.description }}"
@@ -162,7 +162,7 @@
     -o auth-info-required={{ 'none' if item.shared else 'negotiate' }}
     -o printer-is-shared={{ 'true' if item.shared else 'false' }}
   vars:
-    queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+    queue: "{{ item.name }}{{ siue_print_share_suffix if item.shared else '' }}"
     scheme: "{{ 'spoolss-' ~ siue_print_user if item.shared else 'spoolss' }}"
     uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
     description: "{{ (item.short_name ~ ' (' ~ siue_print_user ~ \"'s private share)\") if item.shared else item.description }}"
@@ -174,27 +174,37 @@
   become: yes
 
 - name: Read each queue's job-accounting code
-  command: grep -h '^\*DefaultKmManagment' /etc/cups/ppd/{{ item.name }}{{ '-win' if item.shared else '' }}.ppd
+  command: grep -h '^\*DefaultKmManagment' /etc/cups/ppd/{{ item.name }}{{ siue_print_share_suffix if item.shared else '' }}.ppd
   register: siue_print_accounting
   changed_when: false
   failed_when: false
   loop: "{{ siue_print_all_queues }}"
   loop_control:
-    label: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+    label: "{{ item.name }}{{ siue_print_share_suffix if item.shared else '' }}"
   no_log: yes    # the result holds the account ID
   become: yes
 
 - name: Set the job-accounting code on each queue
-  command: lpadmin -p {{ item.name }}{{ '-win' if item.shared else '' }} -o KmManagment=Custom.{{ siue_print_account_id }}
+  command: lpadmin -p {{ item.name }}{{ siue_print_share_suffix if item.shared else '' }} -o KmManagment=Custom.{{ siue_print_account_id }}
   when: >-
     siue_print_accounting.results[idx].stdout | trim
     != '*DefaultKmManagment: Custom.' ~ siue_print_account_id
   loop: "{{ siue_print_all_queues }}"
   loop_control:
     index_var: idx
-    label: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+    label: "{{ item.name }}{{ siue_print_share_suffix if item.shared else '' }}"
   no_log: yes    # keeps the account ID out of ansible.log
   become: yes
+
+# cupsctl rewrites cupsd.conf without its comments, markers included, which
+# would leave the previous block behind as a stray copy beside a new one.
+- name: Remove shared-queue rules that lost their markers
+  replace:
+    path: /etc/cups/cupsd.conf
+    regexp: '(?<!\(ansible managed\)\n)ServerAlias [^\n]*\n(?:<Location /printers/[^\n]*{{ siue_print_share_suffix | regex_escape }}>\n(?:[^\n]*\n)*?</Location>\n)+'
+    replace: ''
+  become: yes
+  notify: Restart cups
 
 - name: Share the queues to the listed clients
   include_tasks: sharing.yml

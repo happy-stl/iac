@@ -13,4 +13,5 @@ galaxy_info:
     - windows
     - siue
 
-dependencies: []
+dependencies:
+  - role: siue-common

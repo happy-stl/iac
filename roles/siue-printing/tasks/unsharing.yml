@@ -4,20 +4,26 @@
 # TLS certificate are left as sharing.yml set them; neither opens anything.
 
 - name: Look for shared queues
-  command: lpstat -v {{ item.name }}-win
+  command: lpstat -v {{ item.name }}{{ siue_print_share_suffix }}
   register: siue_print_shared_existing
   changed_when: false
   failed_when: false
   loop: "{{ siue_print_queues }}"
   loop_control:
-    label: "{{ item.name }}-win"
+    label: "{{ item.name }}{{ siue_print_share_suffix }}"
 
 - name: Remove the shared queues
-  command: lpadmin -x {{ item.item.name }}-win
+  command: lpadmin -x {{ item.item.name }}{{ siue_print_share_suffix }}
   when: item.rc == 0
   loop: "{{ siue_print_shared_existing.results }}"
   loop_control:
-    label: "{{ item.item.name }}-win"
+    label: "{{ item.item.name }}{{ siue_print_share_suffix }}"
+  become: yes
+
+- name: Remove the certificate copy for Windows PCs
+  file:
+    path: "{{ siue_print_public_cert }}"
+    state: absent
   become: yes
 
 - name: Remove the fixed-user backend
@@ -25,14 +31,6 @@
     path: "/usr/lib/cups/backend/spoolss-{{ siue_print_user }}"
     state: absent
   become: yes
-
-- name: Remove shared-queue rules that lost their markers to cupsctl
-  replace:
-    path: /etc/cups/cupsd.conf
-    regexp: '(?<!\(ansible managed\)\n)ServerAlias [^\n]*\n(?:<Location /printers/[^\n]*-win>\n(?:[^\n]*\n)*?</Location>\n)+'
-    replace: ''
-  become: yes
-  notify: Restart cups
 
 - name: Remove the shared queues' access rules
   blockinfile:

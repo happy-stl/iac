@@ -55,6 +55,16 @@
   become: yes
   notify: Restart cups
 
+# /etc/cups/ssl is root-only. Windows PCs are given the certificate from this
+# readable copy (siue-printing-windows reads it without sudo).
+- name: Publish the certificate for Windows PCs
+  copy:
+    src: "/etc/cups/ssl/{{ ansible_fqdn }}.crt"
+    dest: "{{ siue_print_public_cert }}"
+    remote_src: yes
+    mode: '0644'
+  become: yes
+
 - name: Protect the TLS key
   file:
     path: "/etc/cups/ssl/{{ ansible_fqdn }}.key"
@@ -71,16 +81,6 @@
   become: yes
   notify: Restart cups
 
-# cupsctl rewrites cupsd.conf without its comments, markers included, which
-# would leave the previous block behind as a stray copy beside a new one.
-- name: Remove shared-queue rules that lost their markers
-  replace:
-    path: /etc/cups/cupsd.conf
-    regexp: '(?<!\(ansible managed\)\n)ServerAlias [^\n]*\n(?:<Location /printers/[^\n]*-win>\n(?:[^\n]*\n)*?</Location>\n)+'
-    replace: ''
-  become: yes
-  notify: Restart cups
-
 - name: Allow only the listed clients to reach the shared queues
   blockinfile:
     path: /etc/cups/cupsd.conf
@@ -89,7 +89,7 @@
     block: |
       ServerAlias {{ ansible_hostname }} {{ ansible_fqdn }} {{ ansible_default_ipv4.address }}
       {% for q in siue_print_queues %}
-      <Location /printers/{{ q.name }}-win>
+      <Location /printers/{{ q.name }}{{ siue_print_share_suffix }}>
         Encryption Required
         Order deny,allow
         Deny from all

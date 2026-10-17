@@ -4,9 +4,8 @@
 #   ansible-playbook -K playbooks/university.yml
 #   siue-keytab        # once, then after every campus password change
 #
-# The second play connects Windows PCs listed in the windows_dev inventory group
-# to the queues this machine shares. For WinRM and the inventory, see
-# inventories/siue-windows.example.yml and "Connecting a Windows PC" in README.md.
+# Windows PCs are set up with playbooks/windows.yml, run from this machine
+# afterwards; see "Connecting a Windows PC" in README.md.
 #
 # Prompts for everything personal, so nothing about you is kept in the
 # repository. Press Enter to accept a prompt's default. To skip the prompts,
@@ -37,14 +36,3 @@
   roles:
     - university
 
-# Windows PCs in windows_dev that the Linux machine above shares the copiers
-# with. Run from that Linux machine: its CUPS certificate is read from the
-# controller and trusted on each PC, then the shared queues are added.
-#
-#   ansible-playbook playbooks/university.yml --limit windows_dev
-- name: University (SIUE) Setup (Windows Development)
-  hosts: windows_dev
-  connection: winrm
-  become: no
-  roles:
-    - university

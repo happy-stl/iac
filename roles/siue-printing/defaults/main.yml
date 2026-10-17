@@ -15,25 +15,9 @@ siue_print_user: "{{ ansible_user_id }}"
 # isg.siue.edu alias resolves to the same host but has no Kerberos SPN.
 siue_print_server: kyocera.campus.siue.edu
 
-# Queues to create. `name` is the local CUPS queue, `share` the queue on the
-# Windows server, `ppd` the Kyocera model file, `short_name` what the shared
-# twin is called on the network (DNS-SD names are cut off at 63 bytes).
-# Find a share's model with:
-#   rpcclient --use-kerberos=required kyocera.campus.siue.edu \
-#     -c 'getprinter <share> 2' | grep drivername
-siue_print_queues:
-  - name: ENG2ndFloorKyocera
-    share: ENG2ndFloorKyoceraCopyRoom
-    ppd: Kyocera_TASKalfa_6003i.ppd
-    short_name: ENG 2nd Floor Copier
-    description: Kyocera TASKalfa 6003i - Engineering 2nd floor copy room
-    location: EB 2nd floor copy room
-  - name: ENG3rdFloorKyocera
-    share: ENG3rdFloorKyoceraCopyRoom
-    ppd: Kyocera_TASKalfa_7003i.ppd
-    short_name: ENG 3rd Floor Copier
-    description: Kyocera TASKalfa 7003i - Engineering 3rd floor copy room
-    location: EB 3rd floor copy room
+# The copier queues (siue_print_queues) and the certificate copy for Windows
+# PCs (siue_print_public_cert) are in the siue-common role, which the Windows
+# side reads too.
 
 # IPv4 addresses allowed to print through this machine. When non-empty, each
 # queue gets a "<name>-win" twin shared over IPPS (IPP over TLS) to these

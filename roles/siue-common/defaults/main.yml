@@ -1,0 +1,31 @@
+---
+# Settings both sides of the SIUE copier setup use: siue-printing (the Linux
+# machine that holds the queues) and siue-printing-windows (the PCs it shares
+# them with). Kept here once so the two cannot drift apart.
+
+# Queues to create. `name` is the local CUPS queue, `share` the queue on the
+# Windows server, `ppd` the Kyocera model file, `short_name` what the shared
+# twin is called on the network and on Windows PCs (DNS-SD names are cut off
+# at 63 bytes).
+# Find a share's model with:
+#   rpcclient --use-kerberos=required kyocera.campus.siue.edu \
+#     -c 'getprinter <share> 2' | grep drivername
+siue_print_queues:
+  - name: ENG2ndFloorKyocera
+    share: ENG2ndFloorKyoceraCopyRoom
+    ppd: Kyocera_TASKalfa_6003i.ppd
+    short_name: ENG 2nd Floor Copier
+    description: Kyocera TASKalfa 6003i - Engineering 2nd floor copy room
+    location: EB 2nd floor copy room
+  - name: ENG3rdFloorKyocera
+    share: ENG3rdFloorKyoceraCopyRoom
+    ppd: Kyocera_TASKalfa_7003i.ppd
+    short_name: ENG 3rd Floor Copier
+    description: Kyocera TASKalfa 7003i - Engineering 3rd floor copy room
+    location: EB 3rd floor copy room
+
+# Each queue's shared twin is the queue name plus this suffix.
+siue_print_share_suffix: -win
+
+# A world-readable copy of the CUPS certificate, for the Windows PCs to trust.
+siue_print_public_cert: /etc/cups/siue-print-server.crt

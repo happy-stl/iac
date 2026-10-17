@@ -9,15 +9,10 @@
 # names in the server's certificate. Defaults to the controller's own name.
 siue_print_server_host: "{{ lookup('pipe', 'hostname -f') }}"
 
-# The server's CUPS certificate, on the controller.
-siue_print_server_cert: "/etc/cups/ssl/{{ siue_print_server_host }}.crt"
-
-# The shared queues to add, and what to call them on Windows.
-siue_print_windows_queues:
-  - queue: ENG2ndFloorKyocera-win
-    name: ENG 2nd Floor Copier
-  - queue: ENG3rdFloorKyocera-win
-    name: ENG 3rd Floor Copier
+# The server's CUPS certificate on the controller: the readable copy the
+# siue-printing role publishes. Its path, and the queues added below, come from
+# the siue-common role.
+siue_print_server_cert: "{{ siue_print_public_cert }}"
 
 # A plain PostScript driver: Windows sends PostScript, and the Linux machine
 # renders it with the Kyocera driver and adds the job-accounting code.

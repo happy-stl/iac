@@ -15,4 +15,5 @@ galaxy_info:
     - siue
 
 dependencies:
+  - role: siue-common
   - role: siue-kerberos
