@@ -1,5 +1,9 @@
 # Windows WSL2 Setup with Ansible
 
+> **Connecting a PC to the SIUE copiers?** Do not use the WinRM setup on this
+> page (Basic authentication, unencrypted). Follow "Connecting a Windows PC"
+> in [README.md](README.md), which uses Kerberos over HTTPS.
+
 This repository now supports both Linux and Windows environments. The Windows portion sets up WSL2 (Windows Subsystem for Linux) with development tools.
 
 ## Prerequisites

@@ -5,7 +5,8 @@
 #   siue-keytab        # once, then after every campus password change
 #
 # The second play connects Windows PCs listed in the windows_dev inventory group
-# (see README-Windows.md for WinRM) to the queues this machine shares.
+# to the queues this machine shares. For WinRM and the inventory, see
+# inventories/siue-windows.example.yml and "Connecting a Windows PC" in README.md.
 #
 # Prompts for everything personal, so nothing about you is kept in the
 # repository. Press Enter to accept a prompt's default. To skip the prompts,
