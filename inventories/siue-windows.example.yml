@@ -1,0 +1,28 @@
+# Windows PCs for the university play (playbooks/university.yml), reached over
+# WinRM on HTTPS with your Kerberos ticket. Personal, so keep your copy outside
+# the repository:
+#
+#   mkdir -p ~/.config/siue
+#   cp inventories/siue-windows.example.yml ~/.config/siue/windows.yml
+#   # replace <pc-name> and <campus-username> below, then run from the
+#   # Linux print server:
+#   ansible-playbook -i inventories/local.yml -i ~/.config/siue/windows.yml \
+#     playbooks/university.yml --limit windows_dev
+#
+# Each PC needs WinRM over HTTPS first: see "Connecting a Windows PC with
+# Ansible" in docs/siue-printing/siue-printing.md. Add one entry per PC.
+all:
+  children:
+    windows_dev:
+      hosts:
+        <pc-name>.campus.siue.edu:
+          ansible_connection: winrm
+          ansible_port: 5986
+          ansible_winrm_scheme: https
+          ansible_winrm_transport: kerberos
+          # The PC's WinRM certificate is self-signed. Kerberos still
+          # authenticates both ends.
+          ansible_winrm_server_cert_validation: ignore
+          ansible_user: <campus-username>@CAMPUS.SIUE.EDU
+          # ansible.cfg turns become on; PowerShell has no sudo.
+          ansible_become: false

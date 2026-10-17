@@ -79,8 +79,13 @@ New-NetFirewallRule -Name 'WINRM-HTTPS-In-TCP-SIUE' -DisplayName 'WinRM over HTT
 Disable-NetFirewallRule -Name 'WINRM-HTTP-In-TCP*'
 ```
 
+These settings survive restarts, and the PC's WinRM certificate lasts ten years. Run them again only
+if the PC is reinstalled or renamed. If the Linux machine's IP address changes, update the rule:
+`Set-NetFirewallRule -Name 'WINRM-HTTPS-In-TCP-SIUE' -RemoteAddress <new-linux-ip>`.
+
 **Once, on the Linux machine**, install the WinRM client and describe the PC in an inventory file of
-your own, outside the repository (here `~/.config/siue/windows.yml`):
+your own, outside the repository (here `~/.config/siue/windows.yml`). The repository has a copy to
+start from, `inventories/siue-windows.example.yml`, or write it in one step:
 
 ```bash
 sudo dnf install -y python3-winrm python3-requests-kerberos python3-kerberos
