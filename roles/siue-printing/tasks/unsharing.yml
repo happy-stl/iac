@@ -1,0 +1,86 @@
+---
+# Undo sharing.yml when siue_print_share_clients is empty, so no PC that was
+# listed before can still print as siue_print_user. IdleExitTimeout and the
+# TLS certificate are left as sharing.yml set them; neither opens anything.
+
+- name: Look for shared queues
+  command: lpstat -v {{ item.name }}-win
+  register: siue_print_shared_existing
+  changed_when: false
+  failed_when: false
+  loop: "{{ siue_print_queues }}"
+  loop_control:
+    label: "{{ item.name }}-win"
+
+- name: Remove the shared queues
+  command: lpadmin -x {{ item.item.name }}-win
+  when: item.rc == 0
+  loop: "{{ siue_print_shared_existing.results }}"
+  loop_control:
+    label: "{{ item.item.name }}-win"
+  become: yes
+
+- name: Remove the fixed-user backend
+  file:
+    path: "/usr/lib/cups/backend/spoolss-{{ siue_print_user }}"
+    state: absent
+  become: yes
+
+- name: Remove shared-queue rules that lost their markers to cupsctl
+  replace:
+    path: /etc/cups/cupsd.conf
+    regexp: '(?<!\(ansible managed\)\n)ServerAlias [^\n]*\n(?:<Location /printers/[^\n]*-win>\n(?:[^\n]*\n)*?</Location>\n)+'
+    replace: ''
+  become: yes
+  notify: Restart cups
+
+- name: Remove the shared queues' access rules
+  blockinfile:
+    path: /etc/cups/cupsd.conf
+    marker: "# {mark} siue-printing shared queues (ansible managed)"
+    state: absent
+  become: yes
+  notify: Restart cups
+
+- name: Close the CUPS web pages to other machines
+  replace:
+    path: /etc/cups/cupsd.conf
+    regexp: '^<Location />\n(?:(?!</Location>).*\n)*</Location>\n'
+    replace: |
+      <Location />
+        Order allow,deny
+      </Location>
+  become: yes
+  notify: Restart cups
+
+- name: Listen for IPP on this machine only
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^(Listen localhost:631|Port 631)$'
+    line: Listen localhost:631
+  become: yes
+  notify: Restart cups
+
+- name: Remove any other network listeners
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^Listen (?!localhost:631$|/)'
+    state: absent
+  become: yes
+  notify: Restart cups
+
+- name: Stop advertising printers
+  lineinfile:
+    path: /etc/cups/cupsd.conf
+    regexp: '^{{ item.key }} '
+    line: "{{ item.key }} {{ item.value }}"
+  loop:
+    - { key: Browsing, value: "No" }
+    - { key: BrowseLocalProtocols, value: none }
+  become: yes
+  notify: Restart cups
+
+- name: Check the edited CUPS configuration
+  command: cupsd -t
+  changed_when: false
+  become: yes

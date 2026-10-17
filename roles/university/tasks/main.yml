@@ -1,0 +1,21 @@
+---
+# Linux: campus Kerberos and the copier queues. Windows: connect to the queues
+# a Linux machine shares (run the Linux play first).
+- name: Set up SIUE Kerberos (Linux)
+  include_role:
+    name: siue-kerberos
+  when: ansible_system == "Linux"
+
+- name: Set up the SIUE copiers (Linux)
+  include_role:
+    name: siue-printing
+  when: ansible_system == "Linux"
+
+- name: Connect to the shared SIUE copiers (Windows)
+  include_role:
+    name: siue-printing-windows
+  when: ansible_os_family == "Windows"
+
+- name: University role completed
+  debug:
+    msg: "SIUE setup is complete on {{ inventory_hostname }}."

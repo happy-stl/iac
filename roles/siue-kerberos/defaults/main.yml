@@ -1,0 +1,16 @@
+---
+# Default variables for siue-kerberos role
+
+# SIUE's Active Directory realm. The domain controllers are found through
+# DNS SRV records, so no KDC is listed here.
+siue_krb5_realm: CAMPUS.SIUE.EDU
+
+# DNS domains whose hosts belong to the realm.
+siue_krb5_domains:
+  - campus.siue.edu
+  - isg.siue.edu
+  - siue.edu
+
+# Your CAMPUS username, if it differs from your Linux login name.
+# playbooks/university.yml prompts for it.
+siue_krb5_user: "{{ ansible_user_id }}"

@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# Kerberos for SIUE's Active Directory. Get a ticket with:
+#   kinit <username>@{{ siue_krb5_realm }}
+
+[libdefaults]
+    default_realm = {{ siue_krb5_realm }}
+    dns_lookup_kdc = true
+    dns_lookup_realm = true
+    # siue-krb-refresh falls back to kinit -R, which needs a renewable ticket.
+    renew_lifetime = 7d
+
+[domain_realm]
+{% for domain in siue_krb5_domains %}
+    .{{ domain }} = {{ siue_krb5_realm }}
+    {{ domain }} = {{ siue_krb5_realm }}
+{% endfor %}

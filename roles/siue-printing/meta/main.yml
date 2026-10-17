@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: William Grim
+  description: CUPS queues for SIUE's Kyocera copiers via the campus Windows print server, with Kerberos and job accounting
+  license: MIT
+  min_ansible_version: "2.11"
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+  galaxy_tags:
+    - cups
+    - printing
+    - kerberos
+    - siue
+
+dependencies:
+  - role: siue-kerberos

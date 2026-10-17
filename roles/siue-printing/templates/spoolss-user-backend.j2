@@ -1,0 +1,15 @@
+#!/bin/sh
+# {{ ansible_managed }}
+#
+# CUPS backend: submit the job with {{ siue_print_user }}'s Kerberos ticket,
+# whoever sent it. The queues shared to Windows use this, because a job
+# arriving over the network has no local user for the spoolss backend to take
+# a ticket from.
+#
+# Device URI: spoolss-{{ siue_print_user }}://<server>/<queue>
+
+[ $# -eq 0 ] && exit 0    # device discovery: nothing to advertise
+
+export AUTH_UID={{ siue_print_uid }}
+export DEVICE_URI="spoolss://${DEVICE_URI#spoolss-{{ siue_print_user }}://}"
+exec /usr/lib/cups/backend/spoolss "$@"

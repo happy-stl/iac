@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  author: William Grim
+  description: SIUE setup - campus Kerberos and copier printing on Linux, and connecting a Windows PC to the shared copiers
+  license: MIT
+  min_ansible_version: "2.11"
+  platforms:
+    - name: Fedora
+      versions:
+        - all
+    - name: Windows
+      versions:
+        - all
+  galaxy_tags:
+    - siue
+    - university
+
+# Chosen per operating system in tasks/main.yml.
+dependencies: []

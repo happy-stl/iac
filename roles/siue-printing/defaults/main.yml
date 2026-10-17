@@ -1,0 +1,54 @@
+---
+# Default variables for siue-printing role
+
+# Kyocera job-accounting code (up to 8 digits) written into every job.
+# Deliberately has no default: playbooks/university.yml prompts for it, or
+# pass -e siue_print_account_id=NNNN. Never commit it.
+# siue_print_account_id:
+
+# The local user whose Kerberos ticket authenticates to the print server.
+# Jobs submitted on this machine use the submitter's own ticket; this user's
+# ticket is only used for jobs from the shared (Windows) queues.
+siue_print_user: "{{ ansible_user_id }}"
+
+# Windows print server. Use the name registered in Active Directory: the
+# isg.siue.edu alias resolves to the same host but has no Kerberos SPN.
+siue_print_server: kyocera.campus.siue.edu
+
+# Queues to create. `name` is the local CUPS queue, `share` the queue on the
+# Windows server, `ppd` the Kyocera model file, `short_name` what the shared
+# twin is called on the network (DNS-SD names are cut off at 63 bytes).
+# Find a share's model with:
+#   rpcclient --use-kerberos=required kyocera.campus.siue.edu \
+#     -c 'getprinter <share> 2' | grep drivername
+siue_print_queues:
+  - name: ENG2ndFloorKyocera
+    share: ENG2ndFloorKyoceraCopyRoom
+    ppd: Kyocera_TASKalfa_6003i.ppd
+    short_name: ENG 2nd Floor Copier
+    description: Kyocera TASKalfa 6003i - Engineering 2nd floor copy room
+    location: EB 2nd floor copy room
+  - name: ENG3rdFloorKyocera
+    share: ENG3rdFloorKyoceraCopyRoom
+    ppd: Kyocera_TASKalfa_7003i.ppd
+    short_name: ENG 3rd Floor Copier
+    description: Kyocera TASKalfa 7003i - Engineering 3rd floor copy room
+    location: EB 3rd floor copy room
+
+# IPv4 addresses allowed to print through this machine. When non-empty, each
+# queue gets a "<name>-win" twin shared over IPPS (IPP over TLS) to these
+# addresses only, and every job on it reaches the print server as
+# siue_print_user. The twins are advertised over DNS-SD, which reaches every
+# machine on the subnet, so their names say whose share they are. Leave
+# empty to share nothing.
+siue_print_share_clients: []
+
+# Kyocera's Linux driver bundle. The checksum pins the exact archive.
+siue_kyocera_archive_url: "https://www.kyoceradocumentsolutions.us/content/dam/download-center-americas-cf/us/drivers/drivers/KyoceraLinuxPackages_20240521_tar_gz.download.gz"
+siue_kyocera_archive_sha256: 14235a8e4dbe9f2fdff481252e2cc64431f59a7dcf2497ef54852fb30211568f
+siue_kyocera_rpm: Fedora/Global/kyodialog_x86_64/kyodialog-10.1-0.x86_64.rpm
+siue_kyocera_ppd_dir: /usr/share/kyocera10.1/ppd10.1
+siue_kyocera_cache_dir: /var/cache/siue-printing
+
+# Which clients this role opened the firewall for, so it removes only its own rules.
+siue_print_share_clients_file: /etc/cups/siue-print-share-clients

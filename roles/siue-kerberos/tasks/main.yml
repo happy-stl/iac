@@ -1,0 +1,83 @@
+---
+- name: Install Kerberos client tools
+  package:
+    name: krb5-workstation
+    state: present
+  become: yes
+  when: ansible_system == "Linux"
+
+- name: Configure the SIUE Kerberos realm
+  template:
+    src: campus-siue.conf.j2
+    dest: /etc/krb5.conf.d/campus-siue.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  when: ansible_system == "Linux"
+
+# Keep a ticket without the user: an hourly user timer gets a new ticket from
+# the keytab siue-keytab writes, or renews the current one when there is no
+# working keytab. Linger runs the timer without anyone logged in, which the
+# shared print queues rely on.
+- name: Install the keytab and ticket-refresh commands
+  template:
+    src: "{{ item }}.j2"
+    dest: "/usr/local/bin/{{ item }}"
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - siue-keytab
+    - siue-krb-refresh
+  become: yes
+
+- name: Create the user's client keytab directory
+  file:
+    path: "/var/kerberos/krb5/user/{{ ansible_user_uid }}"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: '0700'
+  become: yes
+
+- name: Create the user's config directories
+  file:
+    path: "{{ ansible_user_dir }}/.config/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - siue
+    - systemd/user
+
+- name: Record the CAMPUS username for the Kerberos commands
+  copy:
+    content: "{{ siue_krb5_user }}\n"
+    dest: "{{ ansible_user_dir }}/.config/siue/campus-user"
+    mode: '0644'
+
+- name: Install the ticket-refresh user units
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ ansible_user_dir }}/.config/systemd/user/{{ item }}"
+    mode: '0644'
+  loop:
+    - siue-krb-refresh.service
+    - siue-krb-refresh.timer
+
+- name: Run the user's systemd instance without a login session
+  command: loginctl enable-linger {{ ansible_user_id }}
+  args:
+    creates: "/var/lib/systemd/linger/{{ ansible_user_id }}"
+  become: yes
+
+- name: Start the hourly ticket refresh
+  systemd:
+    name: siue-krb-refresh.timer
+    scope: user
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  # A non-login run (cron, ssh without a session) may not set it.
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"

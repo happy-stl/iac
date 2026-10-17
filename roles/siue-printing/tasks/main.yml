@@ -1,0 +1,238 @@
+---
+- name: Check the job-accounting code was supplied
+  assert:
+    that:
+      - siue_print_account_id is defined
+      - siue_print_account_id | string is match('^[0-9]{1,8}$')
+    fail_msg: "siue_print_account_id must be your Kyocera account ID (1-8 digits)"
+    quiet: yes
+
+- name: Check this is a Fedora-family system
+  assert:
+    that: ansible_os_family == "RedHat"
+    fail_msg: "siue-printing installs Kyocera's RPM driver and supports Fedora-family systems only"
+    quiet: yes
+
+# Jobs go to the print server through the Print Spooler RPC interface
+# (backend files/spoolss-backend.py, on Samba's Python bindings): the server
+# refuses jobs written to the printer share over SMB, which is how Samba's
+# own smbspool backend prints. Kyocera's pre-filter imports pypdf, which its
+# RPM does not declare.
+- name: Install CUPS, Samba's Python bindings and the driver's Python dependency
+  package:
+    name:
+      - cups
+      - python3-samba
+      - samba-client
+      - python3-pypdf
+    state: present
+  become: yes
+
+- name: Install the Print Spooler RPC backend
+  copy:
+    src: spoolss-backend.py
+    dest: /usr/lib/cups/backend/spoolss
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+
+# The bundle is ~270 MB and only one RPM in it is used, so it is fetched only
+# when that exact driver version is missing, and deleted once installed.
+- name: Check for the Kyocera driver
+  command: rpm -q {{ siue_kyocera_rpm | basename | regex_replace('[.][^.]+[.]rpm$', '') }}
+  register: siue_kyocera_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install the Kyocera driver from Kyocera's Linux bundle
+  when: siue_kyocera_installed.rc != 0
+  become: yes
+  block:
+    - name: Create the driver download cache
+      file:
+        path: "{{ siue_kyocera_cache_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download Kyocera's Linux driver bundle
+      get_url:
+        url: "{{ siue_kyocera_archive_url }}"
+        dest: "{{ siue_kyocera_cache_dir }}/KyoceraLinuxPackages.tar.gz"
+        checksum: "sha256:{{ siue_kyocera_archive_sha256 }}"
+        mode: '0644'
+
+    - name: Extract the Fedora driver RPM
+      unarchive:
+        src: "{{ siue_kyocera_cache_dir }}/KyoceraLinuxPackages.tar.gz"
+        dest: "{{ siue_kyocera_cache_dir }}"
+        remote_src: yes
+        include:
+          - "{{ siue_kyocera_rpm }}"
+
+    - name: Install the Kyocera driver
+      dnf:
+        name: "{{ siue_kyocera_cache_dir }}/{{ siue_kyocera_rpm }}"
+        state: present
+        disable_gpg_check: yes
+
+  always:
+    - name: Remove the driver download
+      file:
+        path: "{{ siue_kyocera_cache_dir }}"
+        state: absent
+
+# The RPM's install script leaves its data directory world-writable.
+- name: Restore sane permissions on the driver directory
+  file:
+    path: "{{ siue_kyocera_ppd_dir | dirname }}"
+    mode: '0755'
+  become: yes
+
+- name: Enable CUPS
+  service:
+    name: cups
+    enabled: yes
+    state: started
+  become: yes
+
+- name: Look up the printing user's uid
+  getent:
+    database: passwd
+    key: "{{ siue_print_user }}"
+
+- name: Work out the queues to create
+  set_fact:
+    siue_print_uid: "{{ ansible_facts.getent_passwd[siue_print_user][1] }}"
+    siue_print_all_queues: >-
+      {{ siue_print_queues | map('combine', {'shared': false}) | list
+         + (siue_print_queues | map('combine', {'shared': true}) | list
+            if siue_print_share_clients | length > 0 else []) }}
+
+- name: Install the fixed-user backend for shared queues
+  template:
+    src: spoolss-user-backend.j2
+    dest: "/usr/lib/cups/backend/spoolss-{{ siue_print_user }}"
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+  when: siue_print_share_clients | length > 0
+
+# Local queues authenticate as whoever submitted the job (negotiate). Shared
+# twins take no authentication from the client and always use
+# siue_print_user's ticket through the spoolss-<user> backend.
+- name: Remove the smb backend earlier versions of this role installed
+  file:
+    path: "/usr/lib/cups/backend/smb-{{ siue_print_user }}"
+    state: absent
+  become: yes
+
+- name: Compare each queue with its wanted settings
+  script: >-
+    queue-matches.py {{ queue | quote }} {{ (siue_kyocera_ppd_dir ~ '/' ~ item.ppd) | quote }}
+    {{ ('device-uri=' ~ uri) | quote }}
+    {{ ('printer-info=' ~ description) | quote }}
+    {{ ('printer-location=' ~ item.location) | quote }}
+    {{ ('auth-info-required=' ~ ('none' if item.shared else 'negotiate')) | quote }}
+    {{ ('printer-is-shared=' ~ (item.shared | string | lower)) | quote }}
+  args:
+    executable: python3
+  become: yes    # printers.conf is root-only
+  vars:
+    queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+    scheme: "{{ 'spoolss-' ~ siue_print_user if item.shared else 'spoolss' }}"
+    uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
+    description: "{{ (item.short_name ~ ' (' ~ siue_print_user ~ \"'s private share)\") if item.shared else item.description }}"
+  register: siue_print_current
+  changed_when: false
+  loop: "{{ siue_print_all_queues }}"
+  loop_control:
+    label: "{{ queue }}"
+
+# Re-running lpadmin -P resets the queue's driver options, so the
+# job-accounting code is set afterwards.
+- name: Create or correct the print queues
+  command: >-
+    lpadmin -p {{ queue }} -E
+    -v {{ uri }}
+    -P {{ siue_kyocera_ppd_dir }}/{{ item.ppd }}
+    -D "{{ description }}"
+    -L "{{ item.location }}"
+    -o auth-info-required={{ 'none' if item.shared else 'negotiate' }}
+    -o printer-is-shared={{ 'true' if item.shared else 'false' }}
+  vars:
+    queue: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+    scheme: "{{ 'spoolss-' ~ siue_print_user if item.shared else 'spoolss' }}"
+    uri: "{{ scheme }}://{{ siue_print_server }}/{{ item.share }}"
+    description: "{{ (item.short_name ~ ' (' ~ siue_print_user ~ \"'s private share)\") if item.shared else item.description }}"
+  when: siue_print_current.results[idx].stdout | trim != 'match'
+  loop: "{{ siue_print_all_queues }}"
+  loop_control:
+    index_var: idx
+    label: "{{ queue }}"
+  become: yes
+
+- name: Read each queue's job-accounting code
+  command: grep -h '^\*DefaultKmManagment' /etc/cups/ppd/{{ item.name }}{{ '-win' if item.shared else '' }}.ppd
+  register: siue_print_accounting
+  changed_when: false
+  failed_when: false
+  loop: "{{ siue_print_all_queues }}"
+  loop_control:
+    label: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+  no_log: yes    # the result holds the account ID
+  become: yes
+
+- name: Set the job-accounting code on each queue
+  command: lpadmin -p {{ item.name }}{{ '-win' if item.shared else '' }} -o KmManagment=Custom.{{ siue_print_account_id }}
+  when: >-
+    siue_print_accounting.results[idx].stdout | trim
+    != '*DefaultKmManagment: Custom.' ~ siue_print_account_id
+  loop: "{{ siue_print_all_queues }}"
+  loop_control:
+    index_var: idx
+    label: "{{ item.name }}{{ '-win' if item.shared else '' }}"
+  no_log: yes    # keeps the account ID out of ansible.log
+  become: yes
+
+- name: Share the queues to the listed clients
+  include_tasks: sharing.yml
+  when: siue_print_share_clients | length > 0
+
+- name: Stop sharing when no clients are listed
+  include_tasks: unsharing.yml
+  when: siue_print_share_clients | length == 0
+
+# Clients dropped from the list keep no way in through the firewall. Only rules
+# this role made are removed: the clients it last opened for are recorded.
+- name: Read the clients the firewall was last opened for
+  command: cat {{ siue_print_share_clients_file }}
+  register: siue_print_previous_clients
+  changed_when: false
+  failed_when: false
+
+- name: Remove firewall rules for clients no longer listed
+  ansible.posix.firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ item }}/32" port port="631" protocol="tcp" accept'
+    permanent: yes
+    immediate: yes
+    state: disabled
+  loop: "{{ siue_print_previous_clients.stdout_lines | difference(siue_print_share_clients) }}"
+  become: yes
+
+- name: Record the clients the firewall is open for
+  copy:
+    dest: "{{ siue_print_share_clients_file }}"
+    content: "{{ siue_print_share_clients | map('regex_replace', '$', '\\n') | join }}"
+    mode: '0644'
+  become: yes
+
+- name: Remind the user to save their Kerberos keys
+  debug:
+    msg: >-
+      Printing authenticates with your Kerberos ticket. Run 'siue-keytab'
+      once (and again after every campus password change) so the hourly
+      siue-krb-refresh timer can keep a ticket for you. Without it, run
+      'kinit {{ siue_krb5_user }}@{{ siue_krb5_realm }}' at least weekly;
+      jobs sent without a ticket wait as "held for authentication".

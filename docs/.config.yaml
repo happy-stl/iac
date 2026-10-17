@@ -1,0 +1,16 @@
+# Documentation for the roles in this repository, rendered with stencil
+# (https://github.com/grimwm/stencil).
+#
+#   cd docs && make gen          # write each package's Makefile and build files
+#   cd docs/<package> && make doc   # markdown -> self-contained HTML
+#
+# See stencil's AUTHORING.md for the markdown dialect.
+lang: en
+
+packages:
+  siue-printing:
+    name: "SIUE copier printing (university role)"
+    package_type: doc
+    dir: siue-printing
+    docs:
+      - siue-printing.md
