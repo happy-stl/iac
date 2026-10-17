@@ -1,0 +1,33 @@
+---
+# Shift+Enter in Windows Terminal sends ESC+Enter (Alt+Enter), so Claude Code
+# and shells over SSH -- tmux included -- see a new line instead of Enter.
+# Only these two entries are added; the rest of settings.json is kept, and the
+# file is backed up beside itself before it is rewritten.
+- name: Bind Shift+Enter to a new line in Windows Terminal
+  ansible.windows.win_shell: |
+    $f = Join-Path $env:LOCALAPPDATA 'Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
+    if (-not (Test-Path $f)) { 'absent'; exit }
+    $id = 'User.sendInput.ShiftEnterNewline'
+    $j = Get-Content -Raw $f | ConvertFrom-Json
+    foreach ($p in 'actions', 'keybindings') {
+      if (-not $j.PSObject.Properties[$p]) { $j | Add-Member -NotePropertyName $p -NotePropertyValue @() }
+    }
+    $hasAction = @($j.actions | Where-Object { $_.id -eq $id }).Count -gt 0
+    $hasKey = @($j.keybindings | Where-Object { $_.id -eq $id -and $_.keys -eq 'shift+enter' }).Count -gt 0
+    if ($hasAction -and $hasKey) { 'present'; exit }
+    Copy-Item $f "$f.bak-iac" -Force
+    if (-not $hasAction) {
+      $j.actions = @($j.actions) + [pscustomobject]@{
+        command = [pscustomobject]@{ action = 'sendInput'; input = "$([char]27)`r" }
+        id = $id
+      }
+    }
+    if (-not $hasKey) {
+      $j.keybindings = @($j.keybindings | Where-Object { $_.keys -ne 'shift+enter' }) +
+        [pscustomobject]@{ id = $id; keys = 'shift+enter' }
+    }
+    $json = $j | ConvertTo-Json -Depth 32
+    [IO.File]::WriteAllText($f, $json, (New-Object Text.UTF8Encoding $false))
+    'changed'
+  register: windows_terminal_keys
+  changed_when: "'changed' in windows_terminal_keys.stdout"

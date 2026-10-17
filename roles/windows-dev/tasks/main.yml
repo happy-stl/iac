@@ -12,3 +12,7 @@
     state: directory
   loop: "{{ directories }}"
   when: ansible_system == "Windows"
+
+- name: Configure Windows Terminal key bindings
+  include_tasks: terminal-keys.yml
+  when: ansible_os_family == "Windows"

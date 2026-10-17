@@ -20,3 +20,20 @@
     dest: "{{ ansible_user_dir }}/.tmux.conf"
     mode: '0644'
   when: ansible_system == "Linux"
+
+# Shift+Enter sends ESC+Enter (what Option/Alt+Enter sends), so Claude Code and
+# shells see a new line even through tmux, which cannot ask kitty for its own
+# Shift+Enter code. cmd+t only means something on macOS.
+- name: Create the kitty config directory
+  file:
+    path: "{{ ansible_user_dir }}/.config/kitty"
+    state: directory
+    mode: '0755'
+  when: ansible_system in ["Linux", "Darwin"]
+
+- name: Deploy kitty configuration
+  copy:
+    src: kitty.conf
+    dest: "{{ ansible_user_dir }}/.config/kitty/kitty.conf"
+    mode: '0644'
+  when: ansible_system in ["Linux", "Darwin"]
