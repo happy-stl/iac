@@ -45,6 +45,17 @@
         path: C:\Windows\Temp\siue-print-server.crt
         state: absent
 
+# A remade certificate leaves the previous one trusted; its key is gone, but
+# nothing should keep trusting it.
+- name: Stop trusting older certificates for the print server
+  ansible.windows.win_shell: |
+    $keep = '{{ lookup('pipe', 'openssl x509 -in ' ~ siue_print_server_cert ~ ' -noout -fingerprint -sha1') | regex_replace('^.*=', '') | replace(':', '') }}'
+    $old = Get-ChildItem Cert:\LocalMachine\Root |
+      Where-Object { $_.Subject -eq 'CN={{ siue_print_server_host }}' -and $_.Thumbprint -ne $keep }
+    $old | ForEach-Object { Remove-Item -Path $_.PSPath; "removed $($_.Thumbprint)" }
+  register: siue_print_stale_certs
+  changed_when: "'removed' in siue_print_stale_certs.stdout"
+
 - name: Install the PostScript class driver
   ansible.windows.win_shell: |
     $name = '{{ siue_print_windows_driver }}'
