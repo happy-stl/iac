@@ -59,7 +59,9 @@ after the Linux run above has shared the copiers with the PC's address.
 
 1. On the PC, once: enable WinRM over HTTPS. The PowerShell is in the guide's
    [Connecting a Windows PC with Ansible](docs/siue-printing/siue-printing.md#connecting-a-windows-pc-with-ansible)
-   section. It survives reboots.
+   section. It survives reboots. To check it, run
+   `winrm enumerate winrm/config/listener`: one listener should show
+   `Transport = HTTPS` and `Port = 5986`.
 2. On the Linux machine, once:
    ```bash
    sudo dnf install -y python3-winrm python3-requests-kerberos python3-kerberos

@@ -10,7 +10,9 @@
 #     playbooks/university.yml --limit windows_dev
 #
 # Each PC needs WinRM over HTTPS first: see "Connecting a Windows PC with
-# Ansible" in docs/siue-printing/siue-printing.md. Add one entry per PC.
+# Ansible" in docs/siue-printing/siue-printing.md. It is ready when
+# `winrm enumerate winrm/config/listener` (on the PC) lists a listener with
+# Transport = HTTPS and Port = 5986. Add one entry per PC.
 all:
   children:
     windows_dev:

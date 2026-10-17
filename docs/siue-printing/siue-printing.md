@@ -79,6 +79,14 @@ New-NetFirewallRule -Name 'WINRM-HTTPS-In-TCP-SIUE' -DisplayName 'WinRM over HTT
 Disable-NetFirewallRule -Name 'WINRM-HTTP-In-TCP*'
 ```
 
+Check that it worked:
+
+```powershell
+winrm enumerate winrm/config/listener
+```
+
+One listener should show `Transport = HTTPS` and `Port = 5986`.
+
 These settings survive restarts, and the PC's WinRM certificate lasts ten years. Run them again only
 if the PC is reinstalled or renamed. If the Linux machine's IP address changes, update the rule:
 `Set-NetFirewallRule -Name 'WINRM-HTTPS-In-TCP-SIUE' -RemoteAddress <new-linux-ip>`.
