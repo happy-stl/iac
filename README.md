@@ -33,18 +33,18 @@ This repository contains the following Ansible roles:
 | **common** | Base role that provides essential system setup and development tools | None |
 | **mednafen-gaming** | Configures Mednafen emulator for gaming with proper audio, video, and controller settings | common |
 | **nvim-config** | Sets up Neovim with auto-updating buffer configuration for better development experience | common |
-| **university** | SIUE setup. Linux: campus Kerberos and the Engineering copiers. Windows: connects the PC to the copiers a Linux machine shares | siue-kerberos, siue-printing, siue-printing-windows |
+| **siue** | SIUE setup. Linux: campus Kerberos and the Engineering copiers. Windows: connects the PC to the copiers a Linux machine shares | siue-kerberos, siue-printing, siue-printing-windows |
 | **siue-kerberos** | Kerberos client for the `CAMPUS.SIUE.EDU` Active Directory realm, with an hourly ticket refresh | None |
 | **siue-printing** | CUPS queues for the Engineering Kyocera copiers through the campus print server, with Kerberos and job accounting; optionally shared to Windows PCs over HTTPS | siue-common, siue-kerberos |
 | **siue-common** | Settings both copier roles share: the queues, the shared-queue suffix, the certificate path | None |
 | **siue-printing-windows** | Trusts the Linux print server's certificate on a Windows PC and adds the shared copiers as HTTPS printers | siue-common |
 
-## University (SIUE) setup
+## SIUE setup
 
 Fedora only: the Kyocera driver is an RPM.
 
 ```bash
-ansible-playbook -K playbooks/university.yml
+ansible-playbook -K playbooks/siue.yml
 siue-keytab
 ```
 

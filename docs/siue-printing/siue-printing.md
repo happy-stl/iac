@@ -33,15 +33,15 @@ unchanged.
 
 # The quick way: Ansible
 
-The `university` role in [the iac repository](https://github.com/happy-stl/iac) does everything in
-this guide. The repository is public, so no GitHub account or invitation is needed to clone it. You
-need Ansible, which Fedora packages:
+The `siue` role in [the iac repository](https://github.com/happy-stl/iac) does everything in this
+guide. The repository is public, so no GitHub account or invitation is needed to clone it. You need
+Ansible, which Fedora packages:
 
 ```bash
 sudo dnf install -y ansible git
 git clone https://github.com/happy-stl/iac.git
 cd iac
-ansible-playbook -K playbooks/university.yml
+ansible-playbook -K playbooks/siue.yml
 siue-keytab
 ```
 

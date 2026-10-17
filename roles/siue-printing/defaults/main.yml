@@ -2,7 +2,7 @@
 # Default variables for siue-printing role
 
 # Kyocera job-accounting code (up to 8 digits) written into every job.
-# Deliberately has no default: playbooks/university.yml prompts for it, or
+# Deliberately has no default: playbooks/siue.yml prompts for it, or
 # pass -e siue_print_account_id=NNNN. Never commit it.
 # siue_print_account_id:
 

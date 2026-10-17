@@ -16,6 +16,6 @@
     name: siue-printing-windows
   when: ansible_os_family == "Windows"
 
-- name: University role completed
+- name: SIUE role completed
   debug:
     msg: "SIUE setup is complete on {{ inventory_hostname }}."

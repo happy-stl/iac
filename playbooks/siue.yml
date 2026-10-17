@@ -1,7 +1,7 @@
 ---
 # SIUE machine setup: campus Kerberos and the Engineering copiers.
 #
-#   ansible-playbook -K playbooks/university.yml
+#   ansible-playbook -K playbooks/siue.yml
 #   siue-keytab        # once, then after every campus password change
 #
 # Windows PCs are set up with playbooks/windows.yml, run from this machine
@@ -11,10 +11,10 @@
 # repository. Press Enter to accept a prompt's default. To skip the prompts,
 # pass the answers instead:
 #
-#   ansible-playbook -K playbooks/university.yml \
+#   ansible-playbook -K playbooks/siue.yml \
 #     -e siue_campus_user_input=jdoe -e siue_print_account_id=12345 \
 #     -e siue_print_share_clients_csv=192.0.2.10
-- name: University (SIUE) Setup (Linux Development)
+- name: SIUE Setup (Linux Development)
   hosts: linux_dev
   connection: local
   become: no
@@ -34,5 +34,5 @@
     siue_krb5_user: "{{ siue_campus_user_input | trim or ansible_user_id }}"
     siue_print_share_clients: "{{ siue_print_share_clients_csv | split(',') | map('trim') | reject('equalto', '') | list }}"
   roles:
-    - university
+    - siue
 

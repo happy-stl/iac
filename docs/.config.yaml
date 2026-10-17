@@ -9,7 +9,7 @@ lang: en
 
 packages:
   siue-printing:
-    name: "SIUE copier printing (university role)"
+    name: "SIUE copier printing (siue role)"
     package_type: doc
     dir: siue-printing
     docs:
