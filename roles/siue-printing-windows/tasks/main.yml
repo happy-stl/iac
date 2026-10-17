@@ -11,7 +11,7 @@
     that: siue_print_cert_stat.stat.exists
     fail_msg: >-
       {{ siue_print_server_cert }} does not exist on the controller. Run the
-      university playbook on the Linux print server with this PC's address in
+      siue playbook on the Linux print server with this PC's address in
       the Windows list first, or set siue_print_server_host and
       siue_print_server_cert.
     quiet: yes

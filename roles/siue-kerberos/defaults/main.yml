@@ -12,5 +12,5 @@ siue_krb5_domains:
   - siue.edu
 
 # Your CAMPUS username, if it differs from your Linux login name.
-# playbooks/university.yml prompts for it.
+# playbooks/siue.yml prompts for it.
 siue_krb5_user: "{{ ansible_user_id }}"

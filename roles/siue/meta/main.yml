@@ -13,7 +13,6 @@ galaxy_info:
         - all
   galaxy_tags:
     - siue
-    - university
 
 # Chosen per operating system in tasks/main.yml.
 dependencies: []
